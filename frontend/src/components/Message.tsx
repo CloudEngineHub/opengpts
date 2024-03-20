@@ -1,12 +1,22 @@
 import { memo, useState } from "react";
-import { Message as MessageType } from "../hooks/useChatList";
+import type {
+  FunctionDefinition,
+  Message as MessageType,
+} from "../hooks/useChatList";
 import { str } from "../utils/str";
 import { cn } from "../utils/cn";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import {
+  CheckCircleIcon,
+  ChevronDownIcon,
+  PencilSquareIcon,
+  PlusCircleIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import { LangSmithActions } from "./LangSmithActions";
 import { DocumentList } from "./Document";
+import { AutosizeTextarea } from "./AutosizeTextarea";
 
 function tryJsonParse(value: string) {
   try {
@@ -19,22 +29,34 @@ function tryJsonParse(value: string) {
 function Function(props: {
   call: boolean;
   name?: string;
-  args?: string;
+  onNameChange?: (newValue: string) => void;
+  argsEntries?: [string, any][];
+  onArgsEntriesChange?: (newValue: [string, any][]) => void;
   open?: boolean;
+  editMode?: boolean;
   setOpen?: (open: boolean) => void;
 }) {
   return (
-    <>
-      {props.call && (
-        <span className="text-gray-900 whitespace-pre-wrap break-words mr-2">
-          Use
-        </span>
-      )}
-      {props.name && (
-        <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 relative -top-[1px] mr-2">
-          {props.name}
-        </span>
-      )}
+    <div className="flex flex-col">
+      <div className="flex">
+        {props.call && (
+          <span className="text-gray-900 whitespace-pre-wrap break-words mr-2">
+            Use
+          </span>
+        )}
+        {props.name !== undefined &&
+          (!props.editMode ? (
+            <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 relative -top-[1px] mr-2">
+              {props.name}
+            </span>
+          ) : (
+            <input
+              onChange={(e) => props.onNameChange?.(e.target.value)}
+              className="rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 -top-[1px] mr-auto focus:ring-0"
+              value={props.name}
+            />
+          ))}
+      </div>
       {!props.call && props.setOpen && (
         <span
           className={cn(
@@ -52,112 +74,356 @@ function Function(props: {
           />
         </span>
       )}
-      {props.args && (
+      {props.argsEntries && (
         <div className="text-gray-900 my-2 whitespace-pre-wrap break-words">
           <div className="ring-1 ring-gray-300 rounded">
             <table className="divide-y divide-gray-300">
               <tbody>
-                {Object.entries(tryJsonParse(props.args)).map(
-                  ([key, value], i) => (
-                    <tr key={i}>
-                      <td
-                        className={cn(
-                          i === 0 ? "" : "border-t border-transparent",
-                          "py-1 px-3 table-cell text-sm border-r border-r-gray-300",
-                        )}
-                      >
+                {props.argsEntries.map(([key, value], i) => (
+                  <tr key={i}>
+                    <td
+                      className={cn(
+                        i === 0 ? "" : "border-t border-transparent",
+                        "py-1 px-3 table-cell text-sm border-r border-r-gray-300 w-0 min-w-[128px]",
+                      )}
+                    >
+                      {props.editMode ? (
+                        <input
+                          className="rounded-md font-medium text-sm text-gray-500 px-2 py-1 focus:ring-0"
+                          value={key}
+                          onChange={(e) => {
+                            if (props.argsEntries !== undefined) {
+                              props.onArgsEntriesChange?.([
+                                ...props.argsEntries.slice(0, i),
+                                [e.target.value, value],
+                                ...props.argsEntries.slice(i + 1),
+                              ]);
+                            }
+                          }}
+                        />
+                      ) : (
                         <div className="font-medium text-gray-500">{key}</div>
-                      </td>
-                      <td
-                        className={cn(
-                          i === 0 ? "" : "border-t border-gray-200",
-                          "py-1 px-3 table-cell",
-                        )}
-                      >
-                        {str(value)}
-                      </td>
-                    </tr>
-                  ),
+                      )}
+                    </td>
+                    <td
+                      className={cn(
+                        i === 0 ? "" : "border-t border-gray-200",
+                        "py-1 px-3 table-cell",
+                      )}
+                    >
+                      {props.editMode ? (
+                        <div className="flex items-center">
+                          <AutosizeTextarea
+                            className="py-0 px-0 prose text-sm leading-normal bg-white"
+                            value={str(value)?.toString()}
+                            onChange={(newValue) => {
+                              if (props.argsEntries !== undefined) {
+                                props.onArgsEntriesChange?.([
+                                  ...props.argsEntries.slice(0, i),
+                                  [key, newValue],
+                                  ...props.argsEntries.slice(i + 1),
+                                ]);
+                              }
+                            }}
+                          />
+                          <TrashIcon
+                            className="w-4 h-4 ml-2 cursor-pointer opacity-50"
+                            onMouseUp={() => {
+                              if (props.argsEntries !== undefined) {
+                                props.onArgsEntriesChange?.([
+                                  ...props.argsEntries.slice(0, i),
+                                  ...props.argsEntries.slice(i + 1),
+                                ]);
+                              }
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        str(value)
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {props.editMode && (
+                  <tr>
+                    <td></td>
+                    <td className="px-3 py-2">
+                      <PlusCircleIcon
+                        className="ml-auto w-6 h-6 cursor-pointer opacity-50"
+                        onMouseUp={() => {
+                          if (props.argsEntries === undefined) {
+                            return;
+                          }
+                          props.onArgsEntriesChange?.([
+                            ...props.argsEntries,
+                            ["", ""],
+                          ]);
+                        }}
+                      />
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
-export const Message = memo(function Message(
-  props: MessageType & { runId?: string },
+function initializeFunctionArgsEntries(definition: FunctionDefinition) {
+  return definition.arguments !== undefined
+    ? Object.entries(tryJsonParse(definition.arguments))
+    : undefined;
+}
+
+function initializeToolCallFunctionArgsEntries(
+  toolCalls: { function?: FunctionDefinition }[],
 ) {
+  return toolCalls.map((toolCall) => {
+    if (toolCall.function !== undefined) {
+      return initializeFunctionArgsEntries(toolCall.function ?? "{}");
+    } else {
+      return [];
+    }
+  });
+}
+
+export const Message = memo(function Message(
+  props: MessageType & {
+    runId?: string;
+    onUpdate?: (newValue: MessageType) => void;
+  },
+) {
+  const { runId, onUpdate, ...messageProps } = props;
+  const [functionArgsEntries, setFunctionArgsEntries] = useState(
+    messageProps.additional_kwargs?.function_call?.arguments !== undefined
+      ? initializeFunctionArgsEntries(
+          messageProps.additional_kwargs.function_call,
+        )
+      : undefined,
+  );
+  const [toolCallFunctionArgsEntries, setToolCallFunctionArgsEntries] =
+    useState(
+      messageProps.additional_kwargs?.tool_calls !== undefined
+        ? initializeToolCallFunctionArgsEntries(
+            messageProps.additional_kwargs.tool_calls,
+          )
+        : undefined,
+    );
+  const [messageData, setMessageData] = useState<MessageType>({
+    ...messageProps,
+  });
   const [open, setOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const contentIsDocuments =
     ["function", "tool"].includes(props.type) &&
     Array.isArray(props.content) &&
     props.content.every((d) => !!d.page_content);
   return (
-    <div className="flex flex-col mb-8">
+    <div className="flex flex-col mb-8 group">
       <div className="leading-6 flex flex-row">
         <div
           className={cn(
             "font-medium text-sm text-gray-400 uppercase mr-2 mt-1 w-28 flex flex-col",
-            props.type === "function" && "mt-2",
+            messageData.type === "function" && "mt-2",
           )}
         >
-          {props.type}
+          {messageData.type}
         </div>
-        <div className="flex-1">
-          {["function", "tool"].includes(props.type) && (
+        <div className="prose flex flex-col">
+          {["function", "tool"].includes(messageData.type) && (
             <Function
               call={false}
-              name={props.name ?? props.additional_kwargs?.name}
+              onNameChange={(newValue) => {
+                if (messageData.name !== undefined) {
+                  setMessageData((prev) => ({ ...prev, name: newValue }));
+                } else if (messageData.additional_kwargs !== undefined) {
+                  setMessageData((prev) => {
+                    const updatedMessage = { ...prev };
+                    if (updatedMessage.additional_kwargs?.name !== undefined) {
+                      updatedMessage.additional_kwargs.name = newValue;
+                    }
+                    return updatedMessage;
+                  });
+                }
+              }}
+              editMode={editMode}
+              name={messageData.name ?? messageData.additional_kwargs?.name}
               open={open}
               setOpen={contentIsDocuments ? undefined : setOpen}
             />
           )}
-          {props.additional_kwargs?.function_call && (
+          {messageData.additional_kwargs?.function_call && (
             <Function
               call={true}
-              name={props.additional_kwargs.function_call.name}
-              args={props.additional_kwargs.function_call.arguments}
+              onNameChange={(newValue) => {
+                setMessageData((prev) => {
+                  const updatedMessage = { ...prev };
+                  if (
+                    updatedMessage.additional_kwargs?.function_call !==
+                    undefined
+                  ) {
+                    updatedMessage.additional_kwargs.function_call.name =
+                      newValue;
+                  }
+                  return updatedMessage;
+                });
+              }}
+              argsEntries={functionArgsEntries}
+              onArgsEntriesChange={setFunctionArgsEntries}
+              editMode={editMode}
+              name={messageData.additional_kwargs.function_call.name}
             />
           )}
-          {props.additional_kwargs?.tool_calls
-            ?.filter((call) => call.function)
-            ?.map((call) => (
+          {messageData.additional_kwargs?.tool_calls?.map((call, i) => {
+            if (call.function === undefined) {
+              return <></>;
+            }
+            return (
               <Function
+                key={i}
                 call={true}
-                name={call.function?.name}
-                args={call.function?.arguments}
+                onNameChange={(newValue) => {
+                  setMessageData((prev) => {
+                    const updatedMessage = { ...prev };
+                    if (
+                      updatedMessage.additional_kwargs?.tool_calls?.[i]
+                        .function !== undefined
+                    ) {
+                      updatedMessage.additional_kwargs.tool_calls[
+                        i
+                      ].function!.name = newValue;
+                    }
+                    return updatedMessage;
+                  });
+                }}
+                argsEntries={toolCallFunctionArgsEntries?.[i]}
+                onArgsEntriesChange={(newValue) =>
+                  setToolCallFunctionArgsEntries((prev) => {
+                    if (prev !== undefined) {
+                      return [
+                        ...prev.slice(0, i),
+                        newValue,
+                        ...prev.slice(i + 1),
+                      ];
+                    }
+                    return prev;
+                  })
+                }
+                editMode={editMode}
+                name={call.function?.name ?? ""}
               />
-            ))}
+            );
+          })}
           {(
             ["function", "tool"].includes(props.type) && !contentIsDocuments
               ? open
               : true
           ) ? (
-            typeof props.content === "string" ? (
-              <div
-                className="text-gray-900 prose"
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(marked(props.content)).trim(),
-                }}
-              />
+            typeof messageData.content === "string" ? (
+              <>
+                {editMode &&
+                messageData.additional_kwargs?.function_call === undefined &&
+                messageData.additional_kwargs?.tool_calls === undefined ? (
+                  <>
+                    <AutosizeTextarea
+                      onChange={(newValue) =>
+                        setMessageData({ ...messageProps, content: newValue })
+                      }
+                      className="text-gray-900 text-md leading-normal prose min-w-[65ch] bg-white"
+                      value={messageData.content}
+                    />
+                  </>
+                ) : (
+                  <div
+                    className="text-gray-900 prose min-w-[65ch]"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(marked(messageData.content)).trim(),
+                    }}
+                  />
+                )}
+              </>
             ) : contentIsDocuments ? (
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              <DocumentList documents={props.content as any} />
+              <DocumentList documents={messageData.content as any} />
             ) : (
-              <div className="text-gray-900 prose">{str(props.content)}</div>
+              <div className="text-gray-900 prose">{str(messageData.content)}</div>
             )
           ) : (
             false
           )}
         </div>
+        {editMode ? (
+          <CheckCircleIcon
+            className="w-6 h-6 cursor-pointer ml-2 opacity-0 group-hover:opacity-50 transition-opacity duration-200"
+            onMouseUp={() => {
+              setEditMode(false);
+              const updatedMessageData = { ...messageData };
+              if (
+                updatedMessageData.additional_kwargs?.function_call !==
+                  undefined &&
+                functionArgsEntries !== undefined
+              ) {
+                updatedMessageData.additional_kwargs.function_call = {
+                  ...updatedMessageData.additional_kwargs.function_call,
+                  arguments: JSON.stringify(
+                    Object.fromEntries(functionArgsEntries),
+                  ),
+                };
+                setFunctionArgsEntries(
+                  initializeFunctionArgsEntries(
+                    updatedMessageData.additional_kwargs.function_call,
+                  ),
+                );
+              }
+              if (
+                updatedMessageData.additional_kwargs?.tool_calls !==
+                  undefined &&
+                toolCallFunctionArgsEntries !== undefined
+              ) {
+                updatedMessageData.additional_kwargs.tool_calls =
+                  updatedMessageData.additional_kwargs.tool_calls.map(
+                    (toolCall, i) => {
+                      if (toolCallFunctionArgsEntries[i] !== undefined) {
+                        return {
+                          ...toolCall,
+                          function: {
+                            ...toolCall.function,
+                            arguments: JSON.stringify(
+                              Object.fromEntries(
+                                toolCallFunctionArgsEntries[i]!.filter(
+                                  ([key]) => key?.length > 0,
+                                ),
+                              ),
+                            ),
+                          },
+                        };
+                      } else {
+                        return toolCall;
+                      }
+                    },
+                  );
+                setToolCallFunctionArgsEntries(
+                  initializeToolCallFunctionArgsEntries(
+                    updatedMessageData.additional_kwargs.tool_calls,
+                  ),
+                );
+              }
+              onUpdate?.(updatedMessageData);
+            }}
+          />
+        ) : (
+          <PencilSquareIcon
+            className="w-6 h-6 cursor-pointer ml-2 opacity-0 group-hover:opacity-50 transition-opacity duration-200"
+            onMouseUp={() => setEditMode(true)}
+          />
+        )}
       </div>
-      {props.runId && (
+      {runId && (
         <div className="mt-2 pl-[120px]">
-          <LangSmithActions runId={props.runId} />
+          <LangSmithActions runId={runId} />
         </div>
       )}
     </div>

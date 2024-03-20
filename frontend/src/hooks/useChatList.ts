@@ -2,6 +2,11 @@ import { useCallback, useEffect, useReducer, useState } from "react";
 import orderBy from "lodash/orderBy";
 import { v4 as uuidv4 } from "uuid";
 
+export interface FunctionDefinition {
+  name?: string;
+  arguments?: string;
+}
+
 export interface Message {
   type: string;
   content:
@@ -11,15 +16,9 @@ export interface Message {
   name?: string;
   additional_kwargs?: {
     name?: string;
-    function_call?: {
-      name?: string;
-      arguments?: string;
-    };
+    function_call?: FunctionDefinition;
     tool_calls?: {
-      function?: {
-        name?: string;
-        arguments?: string;
-      };
+      function?: FunctionDefinition;
     }[];
   };
   example: boolean;

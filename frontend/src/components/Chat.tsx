@@ -22,7 +22,7 @@ function usePrevious<T>(value: T): T | undefined {
 }
 
 export function Chat(props: ChatProps) {
-  const { messages, resumeable } = useChatMessages(
+  const { messages, resumeable, setMessages } = useChatMessages(
     props.chat.thread_id,
     props.stream,
     props.stopStream,
@@ -44,6 +44,13 @@ export function Chat(props: ChatProps) {
         <Message
           {...msg}
           key={i}
+          onUpdate={(newMessage) => {
+            setMessages([
+              ...messages.slice(0, i),
+              newMessage,
+              ...messages.slice(i + 1),
+            ]);
+          }}
           runId={
             i === messages.length - 1 && props.stream?.status === "done"
               ? props.stream?.run_id

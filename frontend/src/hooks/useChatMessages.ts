@@ -26,7 +26,11 @@ export function useChatMessages(
   threadId: string | null,
   stream: StreamState | null,
   stopStream?: (clear?: boolean) => void,
-): { messages: Message[] | null; resumeable: boolean } {
+): {
+  messages: Message[] | null;
+  resumeable: boolean;
+  setMessages: (messages: Message[]) => void;
+} {
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [resumeable, setResumeable] = useState(false);
   const prevStreamStatus = usePrevious(stream?.status);
@@ -65,7 +69,7 @@ export function useChatMessages(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stream?.status]);
 
-  return useMemo(
+  const memoizedValues = useMemo(
     () => ({
       messages: stream?.merge
         ? [...(messages ?? []), ...(stream.messages ?? [])]
@@ -74,4 +78,5 @@ export function useChatMessages(
     }),
     [messages, stream?.merge, stream?.messages, resumeable],
   );
+  return { ...memoizedValues, setMessages };
 }
