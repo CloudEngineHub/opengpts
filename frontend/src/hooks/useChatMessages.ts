@@ -2,16 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Message } from "./useChatList";
 import { StreamState } from "./useStreamState";
 
-async function getMessages(threadId: string) {
-  const { messages, resumeable } = await fetch(
-    `/threads/${threadId}/messages`,
-    {
-      headers: {
-        Accept: "application/json",
-      },
+async function getState(threadId: string) {
+  const { values, resumeable } = await fetch(`/threads/${threadId}/state`, {
+    headers: {
+      Accept: "application/json",
     },
-  ).then((r) => r.json());
-  return { messages, resumeable };
+  }).then((r) => r.json());
+  return { values, resumeable };
 }
 
 function usePrevious<T>(value: T): T | undefined {
@@ -37,8 +34,8 @@ export function useChatMessages(
   useEffect(() => {
     async function fetchMessages() {
       if (threadId) {
-        const { messages, resumeable } = await getMessages(threadId);
-        setMessages(messages);
+        const { values, resumeable } = await getState(threadId);
+        setMessages(values);
         setResumeable(resumeable);
       }
     }
@@ -53,8 +50,8 @@ export function useChatMessages(
   useEffect(() => {
     async function fetchMessages() {
       if (threadId) {
-        const { messages, resumeable } = await getMessages(threadId);
-        setMessages(messages);
+        const { values, resumeable } = await getState(threadId);
+        setMessages(values);
         setResumeable(resumeable);
         stopStream?.(true);
       }

@@ -15,6 +15,9 @@ from langchain_core.messages import (
     HumanMessage,
     HumanMessageChunk,
     SystemMessage,
+    SystemMessageChunk,
+    ToolMessageChunk,
+    ToolMessage,
 )
 from langchain_core.runnables import Runnable, RunnableConfig
 from langserve.serialization import WellKnownLCSerializer
@@ -86,6 +89,10 @@ def map_chunk_to_msg(chunk: BaseMessageChunk) -> BaseMessage:
         return AIMessage(**args)
     elif isinstance(chunk, FunctionMessageChunk):
         return FunctionMessage(**args)
+    elif isinstance(chunk, ToolMessageChunk):
+        return ToolMessage(**args)
+    elif isinstance(chunk, SystemMessageChunk):
+        return SystemMessage(**args)
     elif isinstance(chunk, ChatMessageChunk):
         return ChatMessage(**args)
     else:

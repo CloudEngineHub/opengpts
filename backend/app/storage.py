@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List, Optional, Sequence
+from typing import Any, List, Optional, Sequence
 
 from langchain_core.messages import AnyMessage
 
@@ -99,18 +99,20 @@ async def get_thread(user_id: str, thread_id: str) -> Optional[Thread]:
         )
 
 
-async def get_thread_messages(user_id: str, thread_id: str):
+async def get_thread_state(user_id: str, thread_id: str):
     """Get all messages for a thread."""
     app = get_agent_executor([], AgentType.GPT_35_TURBO, "", False)
     state = await app.aget_state({"configurable": {"thread_id": thread_id}})
     return {
-        "messages": [map_chunk_to_msg(msg) for msg in state.values],
+        "values": [map_chunk_to_msg(c) for c in state.values]
+        if isinstance(state.values, list)
+        else state.values,
         "resumeable": bool(state.next),
     }
 
 
-async def post_thread_messages(
-    user_id: str, thread_id: str, messages: Sequence[AnyMessage]
+async def update_thread_state(
+    user_id: str, thread_id: str, messages: Sequence[AnyMessage] | dict[str, Any]
 ):
     """Add messages to a thread."""
     app = get_agent_executor([], AgentType.GPT_35_TURBO, "", False)
@@ -122,7 +124,9 @@ async def get_thread_history(user_id: str, thread_id: str):
     app = get_agent_executor([], AgentType.GPT_35_TURBO, "", False)
     return [
         {
-            "values": [map_chunk_to_msg(msg) for msg in c.values],
+            "values": [map_chunk_to_msg(c) for c in c.values]
+            if isinstance(c.values, list)
+            else c.values,
             "resumeable": bool(c.next),
             "config": c.config,
             "parent": c.parent_config,
