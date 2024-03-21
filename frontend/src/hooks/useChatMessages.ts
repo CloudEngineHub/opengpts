@@ -29,7 +29,6 @@ export function useChatMessages(
 ): {
   messages: Message[] | null;
   resumeable: boolean;
-  setMessages: (messages: Message[]) => void;
 } {
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [resumeable, setResumeable] = useState(false);
@@ -78,5 +77,5 @@ export function useChatMessages(
     }),
     [messages, stream?.merge, stream?.messages, resumeable],
   );
-  return { ...memoizedValues, setMessages };
+  return { ...memoizedValues };
 }

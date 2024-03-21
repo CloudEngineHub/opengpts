@@ -8,6 +8,7 @@ import { cn } from "../utils/cn";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import {
+  ArrowUturnLeftIcon,
   CheckCircleIcon,
   ChevronDownIcon,
   PencilSquareIcon,
@@ -30,23 +31,23 @@ function Function(props: {
   call: boolean;
   name?: string;
   onNameChange?: (newValue: string) => void;
-  argsEntries?: [string, any][];
-  onArgsEntriesChange?: (newValue: [string, any][]) => void;
+  argsEntries?: [string, unknown][];
+  onArgsEntriesChange?: (newValue: [string, unknown][]) => void;
   open?: boolean;
   editMode?: boolean;
   setOpen?: (open: boolean) => void;
 }) {
   return (
-    <div className="flex flex-col">
-      <div className="flex">
+    <div className="flex flex-col mt-1">
+      <div className="flex flex-col">
         {props.call && (
-          <span className="text-gray-900 whitespace-pre-wrap break-words mr-2">
-            Use
+          <span className="text-gray-900 whitespace-pre-wrap break-words mr-2 uppercase opacity-50 text-xs mb-1">
+            Tool:
           </span>
         )}
         {props.name !== undefined &&
           (!props.editMode ? (
-            <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 relative -top-[1px] mr-2">
+            <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 relative -top-[1px] mr-auto">
               {props.name}
             </span>
           ) : (
@@ -60,7 +61,7 @@ function Function(props: {
       {!props.call && props.setOpen && (
         <span
           className={cn(
-            "inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 cursor-pointer relative top-1",
+            "mr-auto inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 cursor-pointer relative top-1",
             props.open && "mb-2",
           )}
           onClick={(e) => {
@@ -75,9 +76,12 @@ function Function(props: {
         </span>
       )}
       {props.argsEntries && (
-        <div className="text-gray-900 my-2 whitespace-pre-wrap break-words">
+        <div className="text-gray-900 whitespace-pre-wrap break-words">
+          <span className="text-gray-900 whitespace-pre-wrap break-words mr-2 uppercase text-xs opacity-50">
+            Arguments:
+          </span>
           <div className="ring-1 ring-gray-300 rounded">
-            <table className="divide-y divide-gray-300">
+            <table className="mt-0 divide-gray-300">
               <tbody>
                 {props.argsEntries.map(([key, value], i) => (
                   <tr key={i}>
@@ -193,7 +197,9 @@ function initializeToolCallFunctionArgsEntries(
 export const Message = memo(function Message(
   props: MessageType & {
     runId?: string;
-    onUpdate?: (newValue: MessageType) => void;
+    isLast?: boolean;
+    onUpdate: (newValue: MessageType) => void;
+    onRerunPressed: () => void;
   },
 ) {
   const { runId, onUpdate, ...messageProps } = props;
@@ -212,15 +218,15 @@ export const Message = memo(function Message(
           )
         : undefined,
     );
-  const [messageData, setMessageData] = useState<MessageType>({
+  const [messageData, setMessageData] = useState<MessageType>(() => ({
     ...messageProps,
-  });
+  }));
   const [open, setOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const contentIsDocuments =
-    ["function", "tool"].includes(props.type) &&
-    Array.isArray(props.content) &&
-    props.content.every((d) => !!d.page_content);
+    ["function", "tool"].includes(messageData.type) &&
+    Array.isArray(messageData.content) &&
+    messageData.content.every((d) => !!d.page_content);
   return (
     <div className="flex flex-col mb-8 group">
       <div className="leading-6 flex flex-row">
@@ -232,7 +238,7 @@ export const Message = memo(function Message(
         >
           {messageData.type}
         </div>
-        <div className="prose flex flex-col">
+        <div className="prose flex flex-col w-[65ch]">
           {["function", "tool"].includes(messageData.type) && (
             <Function
               call={false}
@@ -318,7 +324,8 @@ export const Message = memo(function Message(
             );
           })}
           {(
-            ["function", "tool"].includes(props.type) && !contentIsDocuments
+            ["function", "tool"].includes(messageData.type) &&
+            !contentIsDocuments
               ? open
               : true
           ) ? (
@@ -340,7 +347,9 @@ export const Message = memo(function Message(
                   <div
                     className="text-gray-900 prose min-w-[65ch]"
                     dangerouslySetInnerHTML={{
-                      __html: DOMPurify.sanitize(marked(messageData.content)).trim(),
+                      __html: DOMPurify.sanitize(
+                        marked(messageData.content),
+                      ).trim(),
                     }}
                   />
                 )}
@@ -349,12 +358,21 @@ export const Message = memo(function Message(
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               <DocumentList documents={messageData.content as any} />
             ) : (
-              <div className="text-gray-900 prose">{str(messageData.content)}</div>
+              <div className="text-gray-900 prose">
+                {str(messageData.content)}
+              </div>
             )
           ) : (
             false
           )}
         </div>
+        <ArrowUturnLeftIcon
+          className={cn(
+            "w-6 h-6 ml-2 opacity-0 group-hover:opacity-50 transition-opacity cursor-pointer",
+            editMode ? " invisible pointer-events-none" : "",
+          )}
+          onMouseUp={props.onRerunPressed}
+        />
         {editMode ? (
           <CheckCircleIcon
             className="w-6 h-6 cursor-pointer ml-2 opacity-0 group-hover:opacity-50 transition-opacity duration-200"

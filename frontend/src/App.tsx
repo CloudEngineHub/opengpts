@@ -4,7 +4,11 @@ import { Chat } from "./components/Chat";
 import { ChatList } from "./components/ChatList";
 import { Layout } from "./components/Layout";
 import { NewChat } from "./components/NewChat";
-import { Chat as ChatType, useChatList } from "./hooks/useChatList";
+import {
+  Chat as ChatType,
+  Message as MessageType,
+  useChatList,
+} from "./hooks/useChatList";
 import { useSchemas } from "./hooks/useSchemas";
 import { useStreamState } from "./hooks/useStreamState";
 import { useConfigList } from "./hooks/useConfigList";
@@ -47,12 +51,24 @@ function App() {
   }, [currentConfig, currentChat, configs]);
 
   const startTurn = useCallback(
-    async (message?: MessageWithFiles, chat: ChatType | null = currentChat) => {
+    async (props: {
+      message?: MessageWithFiles;
+      previousMessages?: MessageType[];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      config?: Record<string, any>;
+      chat?: ChatType | null;
+    }) => {
+      const {
+        message,
+        previousMessages = [],
+        chat = currentChat,
+        config,
+      } = props;
       if (!chat) return;
-      const config = configs?.find(
+      const defaultConfig = configs?.find(
         (c) => c.assistant_id === chat.assistant_id,
       )?.config;
-      if (!config) return;
+      if (!defaultConfig) return;
       const files = message?.files || [];
       if (files.length > 0) {
         const formData = files.reduce((formData, file) => {
@@ -68,9 +84,10 @@ function App() {
           body: formData,
         });
       }
-      await startStream(
-        message
+      await startStream({
+        input: message
           ? [
+              ...previousMessages,
               {
                 content: message.message,
                 additional_kwargs: {},
@@ -78,10 +95,13 @@ function App() {
                 example: false,
               },
             ]
-          : null,
-        chat.assistant_id,
-        chat.thread_id,
-      );
+          : previousMessages.length
+            ? [...previousMessages]
+            : null,
+        assistant_id: chat.assistant_id,
+        thread_id: chat.thread_id,
+        config,
+      });
     },
     [currentChat, startStream, configs],
   );
@@ -93,7 +113,7 @@ function App() {
         message.message,
         currentConfig.assistant_id,
       );
-      return startTurn(message, chat);
+      return startTurn({ message, chat });
     },
     [createChat, startTurn, currentConfig],
   );
