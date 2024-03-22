@@ -28,7 +28,7 @@ CHECKPOINTER = PostgresCheckpoint(at=CheckpointAt.END_OF_STEP)
 
 
 def get_chain(
-    interrupt_before_action=True,
+    interrupt_before_action: bool,
     checkpoint: BaseCheckpointSaver = CHECKPOINTER,
 ):
     tools = [_get_wikipedia()]

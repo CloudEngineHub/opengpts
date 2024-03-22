@@ -14,7 +14,7 @@ class ConfigurableAgent(RunnableBinding):
     def __init__(
         self,
         *,
-        interrupt_before_action: bool = False,
+        interrupt_before_action: Optional[bool] = True,
         kwargs: Optional[Mapping[str, Any]] = None,
         config: Optional[Mapping[str, Any]] = None,
         **others: Any,

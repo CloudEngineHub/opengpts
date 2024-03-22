@@ -39,7 +39,7 @@ export function useHistories(
     }
     fetchHistories();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threadId, stream?.messages]);
+  }, [threadId, stream?.status]);
 
   return { histories, resumeable, setHistories };
 }
