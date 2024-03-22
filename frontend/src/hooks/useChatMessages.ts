@@ -66,7 +66,6 @@ export function useChatMessages(
   }, [stream?.status]);
 
   const memoizedValues = useMemo(() => {
-    console.log("MERGEVALUE", stream?.merge);
     return {
       messages: stream?.merge
         ? [...(messages ?? []), ...(stream.messages ?? [])]

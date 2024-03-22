@@ -9,7 +9,7 @@ import {
   ArrowDownCircleIcon,
 } from "@heroicons/react/24/outline";
 import { MessageWithFiles } from "../utils/formTypes.ts";
-import { useHistories, History } from "../hooks/useHistories.ts";
+import { useHistories } from "../hooks/useHistories.ts";
 import { Timeline } from "./Timeline.tsx";
 import { deepEquals } from "../utils/equals.ts";
 
@@ -30,15 +30,6 @@ function usePrevious<T>(value: T): T | undefined {
     ref.current = value;
   });
   return ref.current;
-}
-
-function extractCompositeKey(history: History) {
-  const historyThreadId = history.config?.configurable?.thread_id;
-  const historyThreadTs = history.config?.configurable?.thread_ts;
-  if (!historyThreadId || !historyThreadTs) {
-    throw new Error("Missing id for history.");
-  }
-  return `${historyThreadId}:${historyThreadTs}`;
 }
 
 export function Chat(props: ChatProps) {
@@ -66,13 +57,8 @@ export function Chat(props: ChatProps) {
     setActiveDisplayedHistoryIndex(
       displayHistories.length > 0 ? displayHistories.length - 1 : 0,
     );
-  }, [histories.length]);
+  }, [displayHistories.length]);
   useEffect(() => {
-    console.log(
-      "SETTING HISTORY DUE TO SERVER MESSAGE UPDATE",
-      serverMessages,
-      localMessages,
-    );
     setLocalMessages([...(serverMessages ?? [])]);
   }, [serverMessages]);
   const updateMessage = (newMessage: MessageType) => {
@@ -145,12 +131,13 @@ export function Chat(props: ChatProps) {
             //   });
             //   setActiveDisplayedHistoryIndex(newDisplayHistoryIndex);
             // }}
-            // runId={
-            //   i === (activeHistory?.values ?? []).length - 1 &&
-            //   props.stream?.status === "done"
-            //     ? props.stream?.run_id
-            //     : undefined
-            // }
+            runId={
+              activeDisplayedHistoryIndex === displayHistories.length - 1 &&
+              i === (activeHistory?.values ?? []).length - 1 &&
+              props.stream?.status === "done"
+                ? props.stream?.run_id
+                : undefined
+            }
           />
         ))}
       </div>
@@ -170,7 +157,7 @@ export function Chat(props: ChatProps) {
           <div
             className="flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800 ring-1 ring-inset ring-yellow-600/20 cursor-pointer"
             onClick={async () => {
-              await fetch(`/threads/${props.chat.thread_id}/messages`, {
+              await fetch(`/threads/${props.chat.thread_id}/state`, {
                 method: "POST",
                 headers: {
                   Accept: "application/json",
@@ -206,7 +193,7 @@ export function Chat(props: ChatProps) {
           histories={displayHistories}
           activeHistoryIndex={activeDisplayedHistoryIndex}
           onChange={(newValue: number) => {
-            setLocalMessages([...displayHistories[newValue]?.values]);
+            setLocalMessages([...(displayHistories[newValue]?.values ?? [])]);
             setActiveDisplayedHistoryIndex(newValue);
           }}
         ></Timeline>

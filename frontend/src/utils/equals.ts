@@ -1,5 +1,7 @@
 export function deepEquals(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   a: Record<string, any>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   b: Record<string, any>,
 ): boolean {
   if (a === b) return true;

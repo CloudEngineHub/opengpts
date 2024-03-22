@@ -228,6 +228,56 @@ export const Message = memo(function Message(
     ["function", "tool"].includes(messageData.type) &&
     Array.isArray(messageData.content) &&
     messageData.content.every((d) => !!d.page_content);
+
+  const finishEditing = () => {
+    props.setEditMode(false);
+    const updatedMessageData = { ...messageData };
+    if (
+      updatedMessageData.additional_kwargs?.function_call !== undefined &&
+      functionArgsEntries !== undefined
+    ) {
+      updatedMessageData.additional_kwargs.function_call = {
+        ...updatedMessageData.additional_kwargs.function_call,
+        arguments: JSON.stringify(Object.fromEntries(functionArgsEntries)),
+      };
+      setFunctionArgsEntries(
+        initializeFunctionArgsEntries(
+          updatedMessageData.additional_kwargs.function_call,
+        ),
+      );
+    }
+    if (
+      updatedMessageData.additional_kwargs?.tool_calls !== undefined &&
+      toolCallFunctionArgsEntries !== undefined
+    ) {
+      updatedMessageData.additional_kwargs.tool_calls =
+        updatedMessageData.additional_kwargs.tool_calls.map((toolCall, i) => {
+          if (toolCallFunctionArgsEntries[i] !== undefined) {
+            return {
+              ...toolCall,
+              function: {
+                ...toolCall.function,
+                arguments: JSON.stringify(
+                  Object.fromEntries(
+                    toolCallFunctionArgsEntries[i]!.filter(
+                      ([key]) => key?.length > 0,
+                    ),
+                  ),
+                ),
+              },
+            };
+          } else {
+            return toolCall;
+          }
+        });
+      setToolCallFunctionArgsEntries(
+        initializeToolCallFunctionArgsEntries(
+          updatedMessageData.additional_kwargs.tool_calls,
+        ),
+      );
+    }
+    onUpdate?.(updatedMessageData);
+  };
   return (
     <div className="flex flex-col mb-8 group">
       <div className="leading-6 flex flex-row">
@@ -340,6 +390,12 @@ export const Message = memo(function Message(
                       onChange={(newValue) =>
                         setMessageData({ ...messageProps, content: newValue })
                       }
+                      onKeyDown={(e) => {
+                        if (!e.metaKey && e.key === "Enter") {
+                          e.preventDefault();
+                          finishEditing();
+                        }
+                      }}
                       className="text-gray-900 text-md leading-normal prose min-w-[65ch] bg-white"
                       value={messageData.content}
                     />
@@ -377,61 +433,7 @@ export const Message = memo(function Message(
         {props.editMode ? (
           <CheckCircleIcon
             className="w-6 h-6 cursor-pointer ml-2 shrink-0 opacity-0 group-hover:opacity-50 transition-opacity duration-200"
-            onMouseUp={() => {
-              props.setEditMode(false);
-              const updatedMessageData = { ...messageData };
-              if (
-                updatedMessageData.additional_kwargs?.function_call !==
-                  undefined &&
-                functionArgsEntries !== undefined
-              ) {
-                updatedMessageData.additional_kwargs.function_call = {
-                  ...updatedMessageData.additional_kwargs.function_call,
-                  arguments: JSON.stringify(
-                    Object.fromEntries(functionArgsEntries),
-                  ),
-                };
-                setFunctionArgsEntries(
-                  initializeFunctionArgsEntries(
-                    updatedMessageData.additional_kwargs.function_call,
-                  ),
-                );
-              }
-              if (
-                updatedMessageData.additional_kwargs?.tool_calls !==
-                  undefined &&
-                toolCallFunctionArgsEntries !== undefined
-              ) {
-                updatedMessageData.additional_kwargs.tool_calls =
-                  updatedMessageData.additional_kwargs.tool_calls.map(
-                    (toolCall, i) => {
-                      if (toolCallFunctionArgsEntries[i] !== undefined) {
-                        return {
-                          ...toolCall,
-                          function: {
-                            ...toolCall.function,
-                            arguments: JSON.stringify(
-                              Object.fromEntries(
-                                toolCallFunctionArgsEntries[i]!.filter(
-                                  ([key]) => key?.length > 0,
-                                ),
-                              ),
-                            ),
-                          },
-                        };
-                      } else {
-                        return toolCall;
-                      }
-                    },
-                  );
-                setToolCallFunctionArgsEntries(
-                  initializeToolCallFunctionArgsEntries(
-                    updatedMessageData.additional_kwargs.tool_calls,
-                  ),
-                );
-              }
-              onUpdate?.(updatedMessageData);
-            }}
+            onMouseUp={finishEditing}
           />
         ) : (
           <PencilSquareIcon

@@ -1,4 +1,4 @@
-from typing import Annotated, List, Sequence
+from typing import Annotated, Any, List, Optional, Sequence
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Path
@@ -21,10 +21,11 @@ class ThreadPutRequest(BaseModel):
     assistant_id: str = Field(..., description="The ID of the assistant to use.")
 
 
-class ThreadMessagesPostRequest(BaseModel):
+class ThreadPostRequest(BaseModel):
     """Payload for adding messages to a thread."""
 
-    messages: Sequence[AnyMessage]
+    values: Optional[Any]
+    messages: Optional[Sequence[AnyMessage]]
 
 
 @router.get("/")
@@ -46,10 +47,18 @@ async def get_thread_state(
 async def update_thread_state(
     opengpts_user_id: OpengptsUserId,
     tid: ThreadID,
-    payload: ThreadMessagesPostRequest,
+    payload: ThreadPostRequest,
 ):
     """Add messages to a thread."""
-    return await storage.update_thread_state(opengpts_user_id, tid, payload.messages)
+    if payload.messages is not None:
+        return await storage.update_thread_state(opengpts_user_id, tid, payload.messages)
+    elif payload.values is not None:
+        return await storage.update_thread_state(opengpts_user_id, tid, payload.values)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail='Invalid payload. You must supply either "messages" or "values".'
+        )
 
 
 @router.get("/{tid}/history")
