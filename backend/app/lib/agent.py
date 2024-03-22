@@ -5,6 +5,7 @@ from langchain_core.runnables import (
 )
 
 from app.chain import get_chain
+from app.hack import USER_SPECIFIED_CHAIN
 
 
 class ConfigurableAgent(RunnableBinding):
@@ -19,7 +20,7 @@ class ConfigurableAgent(RunnableBinding):
         **others: Any,
     ) -> None:
         others.pop("bound", None)
-        _agent = get_chain(
+        _agent = USER_SPECIFIED_CHAIN.chain or get_chain(
             interrupt_before_action=False,
         )
         agent_executor = _agent.with_config({"recursion_limit": 50})
