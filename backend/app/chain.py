@@ -1,24 +1,43 @@
 import json
+from functools import lru_cache
 
-from langchain.tools import BaseTool
 from langchain.tools.render import format_tool_to_openai_tool
-from langchain_core.language_models.base import LanguageModelLike
+from langchain.tools.retriever import create_retriever_tool
+from langchain_community.retrievers import (
+    WikipediaRetriever,
+)
 from langchain_core.messages import SystemMessage, ToolMessage
-from langgraph.checkpoint import BaseCheckpointSaver
+from langchain_openai import ChatOpenAI
+from langgraph.checkpoint import BaseCheckpointSaver, CheckpointAt
 from langgraph.graph import END
 from langgraph.graph.message import MessageGraph
 from langgraph.prebuilt import ToolExecutor, ToolInvocation
 
-from app.message_types import LiberalToolMessage
+from app.lib.checkpoint import PostgresCheckpoint
+from app.lib.message_types import LiberalToolMessage
 
 
-def get_openai_agent_executor(
-    tools: list[BaseTool],
-    llm: LanguageModelLike,
-    system_message: str,
-    interrupt_before_action: bool,
-    checkpoint: BaseCheckpointSaver,
+@lru_cache(maxsize=1)
+def _get_wikipedia():
+    return create_retriever_tool(
+        WikipediaRetriever(), "wikipedia", "Search for a query on Wikipedia"
+    )
+
+
+CHECKPOINTER = PostgresCheckpoint(at=CheckpointAt.END_OF_STEP)
+
+
+def get_chain(
+    interrupt_before_action=True,
+    checkpoint: BaseCheckpointSaver = CHECKPOINTER,
 ):
+    tools = [_get_wikipedia()]
+    llm = ChatOpenAI(
+        model="gpt-3.5-turbo-0125",
+        temperature=0,
+        streaming=True,
+    )
+
     async def _get_messages(messages):
         msgs = []
         for m in messages:
@@ -30,18 +49,24 @@ def get_openai_agent_executor(
             else:
                 msgs.append(m)
 
-        return [SystemMessage(content=system_message)] + msgs
+        return [
+            SystemMessage(
+                content="You are a Mr. Meeseeks. Be helpful and talk exactly like a Meeseeks would."
+            )
+        ] + msgs
 
     if tools:
         llm_with_tools = llm.bind(tools=[format_tool_to_openai_tool(t) for t in tools])
     else:
         llm_with_tools = llm
+
     def agent(messages):
         return (
             messages
             if len(messages[-1].additional_kwargs.get("tool_calls", []))
             else _get_messages | llm_with_tools
         )
+
     tool_executor = ToolExecutor(tools)
 
     # Define the function that determines whether to continue or not

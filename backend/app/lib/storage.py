@@ -3,10 +3,10 @@ from typing import Any, List, Optional, Sequence
 
 from langchain_core.messages import AnyMessage
 
-from app.agent import AgentType, get_agent_executor
-from app.lifespan import get_pg_pool
-from app.schema import Assistant, Thread
-from app.stream import map_chunk_to_msg
+from app.chain import get_chain
+from app.lib.lifespan import get_pg_pool
+from app.lib.schema import Assistant, Thread
+from app.lib.stream import map_chunk_to_msg
 
 
 async def list_assistants(user_id: str) -> List[Assistant]:
@@ -101,7 +101,7 @@ async def get_thread(user_id: str, thread_id: str) -> Optional[Thread]:
 
 async def get_thread_state(user_id: str, thread_id: str):
     """Get all messages for a thread."""
-    app = get_agent_executor([], AgentType.GPT_35_TURBO, "", False)
+    app = get_chain(False)
     state = await app.aget_state({"configurable": {"thread_id": thread_id}})
     return {
         "values": [map_chunk_to_msg(c) for c in state.values]
@@ -115,13 +115,13 @@ async def update_thread_state(
     user_id: str, thread_id: str, messages: Sequence[AnyMessage] | dict[str, Any]
 ):
     """Add messages to a thread."""
-    app = get_agent_executor([], AgentType.GPT_35_TURBO, "", False)
+    app = get_chain(False)
     return await app.aupdate_state({"configurable": {"thread_id": thread_id}}, messages)
 
 
 async def get_thread_history(user_id: str, thread_id: str):
     """Get the history of a thread."""
-    app = get_agent_executor([], AgentType.GPT_35_TURBO, "", False)
+    app = get_chain(False)
     return [
         {
             "values": [map_chunk_to_msg(c) for c in c.values]

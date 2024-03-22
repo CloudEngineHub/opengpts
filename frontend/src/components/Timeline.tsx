@@ -14,7 +14,7 @@ export function Timeline(props: {
   activeHistoryIndex: number;
   onChange?: (newValue: number) => void;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   return (
     <div className="flex items-center">
       <button

@@ -13,10 +13,10 @@ from langsmith.utils import tracing_is_enabled
 from pydantic import BaseModel, Field
 from sse_starlette import EventSourceResponse
 
-from app.agent import agent
-from app.schema import OpengptsUserId
-from app.storage import get_assistant
-from app.stream import astream_messages, to_sse
+from app.lib.agent import agent
+from app.lib.schema import OpengptsUserId
+from app.lib.storage import get_assistant
+from app.lib.stream import astream_messages, to_sse
 
 router = APIRouter()
 
@@ -41,7 +41,7 @@ async def _run_input_and_config(request: Request, opengpts_user_id: OpengptsUser
     config: RunnableConfig = {
         **assistant["config"],
         "configurable": {
-            **assistant["config"]["configurable"],
+            **assistant["config"].get("configurable", {}),
             **(body.get("config", {}).get("configurable") or {}),
             "user_id": opengpts_user_id,
             "thread_id": body["thread_id"],

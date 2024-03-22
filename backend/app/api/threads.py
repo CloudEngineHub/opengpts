@@ -5,8 +5,8 @@ from fastapi import APIRouter, HTTPException, Path
 from langchain.schema.messages import AnyMessage
 from pydantic import BaseModel, Field
 
-import app.storage as storage
-from app.schema import OpengptsUserId, Thread
+import app.lib.storage as storage
+from app.lib.schema import OpengptsUserId, Thread
 
 router = APIRouter()
 
@@ -51,13 +51,15 @@ async def update_thread_state(
 ):
     """Add messages to a thread."""
     if payload.messages is not None:
-        return await storage.update_thread_state(opengpts_user_id, tid, payload.messages)
+        return await storage.update_thread_state(
+            opengpts_user_id, tid, payload.messages
+        )
     elif payload.values is not None:
         return await storage.update_thread_state(opengpts_user_id, tid, payload.values)
     else:
         raise HTTPException(
             status_code=400,
-            detail='Invalid payload. You must supply either "messages" or "values".'
+            detail='Invalid payload. You must supply either "messages" or "values".',
         )
 
 
