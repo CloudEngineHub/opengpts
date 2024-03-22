@@ -14,7 +14,7 @@ export function Timeline(props: {
   activeHistoryIndex: number;
   onChange?: (newValue: number) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   return (
     <div className="flex items-center">
       <button
@@ -46,12 +46,12 @@ export function Timeline(props: {
       {expanded ? (
         <ChevronLeftIcon
           className="h-4 w-4 cursor-pointer shrink-0 mr-4"
-          onMouseUp={() => setExpanded((expanded) => !expanded)}
+          onClick={() => setExpanded((expanded) => !expanded)}
         />
       ) : (
         <ChevronRightIcon
           className="h-4 w-4 cursor-pointer shrink-0 mr-4"
-          onMouseUp={() => setExpanded((expanded) => !expanded)}
+          onClick={() => setExpanded((expanded) => !expanded)}
         />
       )}
     </div>

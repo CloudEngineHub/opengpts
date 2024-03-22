@@ -114,7 +114,7 @@ async def post_thread_messages(
 ):
     """Add messages to a thread."""
     app = get_agent_executor([], AgentType.GPT_35_TURBO, "", False)
-    await app.aupdate_state({"configurable": {"thread_id": thread_id}}, messages)
+    return await app.aupdate_state({"configurable": {"thread_id": thread_id}}, messages)
 
 
 async def get_thread_history(user_id: str, thread_id: str):

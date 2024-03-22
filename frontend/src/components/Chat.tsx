@@ -1,13 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Chat as ChatType, Message as MessageType } from "../hooks/useChatList";
 import { StreamStateProps } from "../hooks/useStreamState";
 import { useChatMessages } from "../hooks/useChatMessages";
 import TypingBox from "./TypingBox";
 import { Message } from "./Message";
-import { ArrowDownCircleIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowPathIcon,
+  ArrowDownCircleIcon,
+} from "@heroicons/react/24/outline";
 import { MessageWithFiles } from "../utils/formTypes.ts";
-import { useHistories } from "../hooks/useHistories.ts";
+import { useHistories, History } from "../hooks/useHistories.ts";
 import { Timeline } from "./Timeline.tsx";
+import { deepEquals } from "../utils/equals.ts";
 
 interface ChatProps extends Pick<StreamStateProps, "stream" | "stopStream"> {
   chat: ChatType;
@@ -20,95 +24,137 @@ interface ChatProps extends Pick<StreamStateProps, "stream" | "stopStream"> {
   isDocumentRetrievalActive: boolean;
 }
 
+function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T>();
+  useEffect(() => {
+    ref.current = value;
+  });
+  return ref.current;
+}
+
+function extractCompositeKey(history: History) {
+  const historyThreadId = history.config?.configurable?.thread_id;
+  const historyThreadTs = history.config?.configurable?.thread_ts;
+  if (!historyThreadId || !historyThreadTs) {
+    throw new Error("Missing id for history.");
+  }
+  return `${historyThreadId}:${historyThreadTs}`;
+}
+
 export function Chat(props: ChatProps) {
-  const { resumeable } = useChatMessages(
+  const { messages: serverMessages, resumeable } = useChatMessages(
     props.chat.thread_id,
     props.stream,
     props.stopStream,
   );
-  const { histories, setHistories } = useHistories(
-    props.chat.thread_id,
-    props.stream,
-  );
-  const displayHistories = [...(histories ?? [])].reverse();
-  const [activeHistoryIndex, setActiveHistoryIndex] = useState(0);
-  const activeHistory = displayHistories[activeHistoryIndex];
+  const { histories } = useHistories(props.chat.thread_id, props.stream);
+  const displayHistories = [...(histories ?? [])]
+    .reverse()
+    .filter((history) => history.resumeable)
+    .filter(
+      (history, i, self) => !deepEquals(history.values, self[i - 1]?.values),
+    );
+  const [activeDisplayedHistoryIndex, setActiveDisplayedHistoryIndex] =
+    useState(0);
+  const activeHistory = displayHistories[activeDisplayedHistoryIndex];
+  const [messageEditStatuses, setMessageEditStatuses] = useState<boolean[]>([]);
+  const [localMessages, setLocalMessages] = useState<MessageType[]>([]);
   useEffect(() => {
-    setActiveHistoryIndex(histories.length > 0 ? histories.length - 1 : 0);
-  }, [histories]);
+    setMessageEditStatuses(localMessages.map(() => false) ?? []);
+  }, [localMessages]);
+  useEffect(() => {
+    setActiveDisplayedHistoryIndex(
+      displayHistories.length > 0 ? displayHistories.length - 1 : 0,
+    );
+  }, [histories.length]);
+  useEffect(() => {
+    console.log(
+      "SETTING HISTORY DUE TO SERVER MESSAGE UPDATE",
+      serverMessages,
+      localMessages,
+    );
+    setLocalMessages([...(serverMessages ?? [])]);
+  }, [serverMessages]);
+  const updateMessage = (newMessage: MessageType) => {
+    // setHistories((prevHistories) => {
+    //   const trueActiveHistoryIndex = prevHistories.findIndex((prevHistory) => {
+    //     return extractCompositeKey(prevHistory) === extractCompositeKey(activeHistory);
+    //   });
+    //   const updatedMessageIndex = activeHistory.values.findIndex(
+    //     (historyMessage: MessageType) =>
+    //       historyMessage.id === newMessage.id,
+    //   );
+    //   const newHistory = {
+    //     ...activeHistory,
+    //     values: [
+    //       ...activeHistory.values.slice(0, updatedMessageIndex),
+    //       newMessage,
+    //       ...activeHistory.values.slice(updatedMessageIndex + 1),
+    //     ],
+    //   };
+    //   return [
+    //     ...prevHistories.slice(0, trueActiveHistoryIndex),
+    //     newHistory,
+    //     ...prevHistories.slice(trueActiveHistoryIndex + 1),
+    //   ];
+    // });
+    setLocalMessages((prevLocalMessages) => {
+      const updatedMessageIndex = localMessages.findIndex(
+        (message: MessageType) => message.id === newMessage.id,
+      );
+      return [
+        ...prevLocalMessages.slice(0, updatedMessageIndex),
+        newMessage,
+        ...prevLocalMessages.slice(updatedMessageIndex + 1),
+      ];
+    });
+  };
+  const prevMessages = usePrevious(serverMessages);
+  useEffect(() => {
+    scrollTo({
+      top: document.body.scrollHeight,
+      behavior:
+        prevMessages && prevMessages?.length === serverMessages?.length
+          ? "smooth"
+          : undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverMessages]);
   return (
     <div className="flex-1 flex flex-col items-stretch pb-[76px] pt-2 mb-16">
-      <div className="flex flex-col-reverse">
-        {[...(activeHistory?.values ? activeHistory.values : [])]
-          .reverse()
-          .map((msg, i) => (
-            <Message
-              {...msg}
-              key={msg.id ?? i}
-              onUpdate={(newMessage) => {
-                setHistories((prevHistories) => {
-                  return [
-                    ...prevHistories.map((history) => {
-                      const matchingIndex = history.values.findIndex(
-                        (historyMessage: MessageType) =>
-                          historyMessage.id === newMessage.id,
-                      );
-                      if (matchingIndex !== -1) {
-                        return {
-                          ...history,
-                          values: [
-                            ...history.values.slice(0, matchingIndex),
-                            newMessage,
-                            ...history.values.slice(matchingIndex + 1),
-                          ],
-                        };
-                      }
-                      return history;
-                    }),
-                  ];
-                });
-              }}
-              onRerunPressed={() => {
-                const oldestMatchingHistoryIndex =
-                  histories.length -
-                  1 -
-                  [...histories].reverse().findIndex((history) => {
-                    return (
-                      history.resumeable &&
-                      !!history.values.find((message) => {
-                        return message.id === msg.id;
-                      })
-                    );
-                  });
-                console.log(
-                  oldestMatchingHistoryIndex,
-                  histories[oldestMatchingHistoryIndex],
-                  histories,
-                );
-                if (oldestMatchingHistoryIndex === histories.length) {
-                  return;
-                }
-                props.startStream({
-                  previousMessages: [
-                    ...histories[oldestMatchingHistoryIndex].values,
-                  ],
-                  config: { ...histories[oldestMatchingHistoryIndex].config },
-                });
-                setHistories((prevHistories) =>
-                  prevHistories.slice(oldestMatchingHistoryIndex),
-                );
-              }}
-              runId={
-                i === (activeHistory?.values ?? []).length - 1 &&
-                props.stream?.status === "done"
-                  ? props.stream?.run_id
-                  : undefined
-              }
-            />
-          ))}
+      <div className="flex flex-col">
+        {[...localMessages].map((msg, i) => (
+          <Message
+            {...msg}
+            key={`${msg.id}:${msg.content}`}
+            editMode={messageEditStatuses[i]}
+            setEditMode={(newValue) => {
+              setMessageEditStatuses((prevStatuses) => {
+                const newStatuses = [...prevStatuses];
+                newStatuses[i] = newValue;
+                return newStatuses;
+              });
+            }}
+            onUpdate={updateMessage}
+            // onRewindPressed={() => {
+            //   // First displayed history where the message appears
+            //   const newDisplayHistoryIndex = displayHistories.findIndex((history) => {
+            //     return !!history.values.find((message) => {
+            //       return deepEquals(message, msg);
+            //     });
+            //   });
+            //   setActiveDisplayedHistoryIndex(newDisplayHistoryIndex);
+            // }}
+            // runId={
+            //   i === (activeHistory?.values ?? []).length - 1 &&
+            //   props.stream?.status === "done"
+            //     ? props.stream?.run_id
+            //     : undefined
+            // }
+          />
+        ))}
       </div>
-      {(props.stream?.status === "inflight" ||
-        activeHistory?.values == null) && (
+      {(props.stream?.status === "inflight" || localMessages == null) && (
         <div className="leading-6 mb-2 animate-pulse font-black text-gray-400 text-lg">
           ...
         </div>
@@ -118,27 +164,58 @@ export function Chat(props: ChatProps) {
           An error has occurred. Please try again.
         </div>
       )}
-      {resumeable && props.stream?.status !== "inflight" && (
-        <div
-          className="flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800 ring-1 ring-inset ring-yellow-600/20 cursor-pointer"
-          onClick={() => props.startStream({})}
-        >
-          <ArrowDownCircleIcon className="h-5 w-5 mr-1" />
-          Click to continue.
-        </div>
-      )}
+      {resumeable &&
+        activeDisplayedHistoryIndex === displayHistories.length - 1 &&
+        props.stream?.status !== "inflight" && (
+          <div
+            className="flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800 ring-1 ring-inset ring-yellow-600/20 cursor-pointer"
+            onClick={async () => {
+              await fetch(`/threads/${props.chat.thread_id}/messages`, {
+                method: "POST",
+                headers: {
+                  Accept: "application/json",
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ messages: [...(localMessages ?? [])] }),
+              }).then((res) => res.json());
+              props.startStream({});
+            }}
+          >
+            <ArrowDownCircleIcon className="h-5 w-5 mr-1" />
+            Permit tool execution.
+          </div>
+        )}
+      {!messageEditStatuses.find((status) => status) &&
+        activeDisplayedHistoryIndex < displayHistories.length - 1 && (
+          <div
+            className="flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800 ring-1 ring-inset ring-yellow-600/20 cursor-pointer"
+            onClick={() =>
+              props.startStream({
+                previousMessages: [...(localMessages ?? [])],
+                config: { ...activeHistory?.config },
+              })
+            }
+          >
+            <ArrowPathIcon className="h-5 w-5 mr-1" />
+            Rerun current history.
+          </div>
+        )}
       <div className="fixed left-0 lg:left-72 bottom-0 right-0 p-4 bg-gray-100">
         <Timeline
           disabled={props.stream?.status === "inflight"}
           histories={displayHistories}
-          activeHistoryIndex={activeHistoryIndex}
-          onChange={(newValue: number) => setActiveHistoryIndex(newValue)}
+          activeHistoryIndex={activeDisplayedHistoryIndex}
+          onChange={(newValue: number) => {
+            setLocalMessages([...displayHistories[newValue]?.values]);
+            setActiveDisplayedHistoryIndex(newValue);
+          }}
         ></Timeline>
         <TypingBox
+          disabled={messageEditStatuses.find((status) => status)}
           onSubmit={(dataWithFiles) => {
             return props.startStream({
               message: dataWithFiles,
-              previousMessages: [...(activeHistory?.values ?? [])],
+              previousMessages: [...(localMessages ?? [])],
               config: { ...activeHistory?.config },
             });
           }}

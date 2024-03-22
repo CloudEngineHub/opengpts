@@ -8,7 +8,7 @@ import { cn } from "../utils/cn";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import {
-  ArrowUturnLeftIcon,
+  // ArrowUturnLeftIcon,
   CheckCircleIcon,
   ChevronDownIcon,
   PencilSquareIcon,
@@ -198,8 +198,10 @@ export const Message = memo(function Message(
   props: MessageType & {
     runId?: string;
     isLast?: boolean;
+    editMode: boolean;
+    setEditMode: (newValue: boolean) => void;
     onUpdate: (newValue: MessageType) => void;
-    onRerunPressed: () => void;
+    // onRewindPressed: () => void;
   },
 ) {
   const { runId, onUpdate, ...messageProps } = props;
@@ -222,7 +224,6 @@ export const Message = memo(function Message(
     ...messageProps,
   }));
   const [open, setOpen] = useState(false);
-  const [editMode, setEditMode] = useState(false);
   const contentIsDocuments =
     ["function", "tool"].includes(messageData.type) &&
     Array.isArray(messageData.content) &&
@@ -255,7 +256,7 @@ export const Message = memo(function Message(
                   });
                 }
               }}
-              editMode={editMode}
+              editMode={props.editMode}
               name={messageData.name ?? messageData.additional_kwargs?.name}
               open={open}
               setOpen={contentIsDocuments ? undefined : setOpen}
@@ -279,7 +280,7 @@ export const Message = memo(function Message(
               }}
               argsEntries={functionArgsEntries}
               onArgsEntriesChange={setFunctionArgsEntries}
-              editMode={editMode}
+              editMode={props.editMode}
               name={messageData.additional_kwargs.function_call.name}
             />
           )}
@@ -318,7 +319,7 @@ export const Message = memo(function Message(
                     return prev;
                   })
                 }
-                editMode={editMode}
+                editMode={props.editMode}
                 name={call.function?.name ?? ""}
               />
             );
@@ -331,7 +332,7 @@ export const Message = memo(function Message(
           ) ? (
             typeof messageData.content === "string" ? (
               <>
-                {editMode &&
+                {props.editMode &&
                 messageData.additional_kwargs?.function_call === undefined &&
                 messageData.additional_kwargs?.tool_calls === undefined ? (
                   <>
@@ -366,18 +367,18 @@ export const Message = memo(function Message(
             false
           )}
         </div>
-        <ArrowUturnLeftIcon
+        {/* <ArrowUturnLeftIcon
           className={cn(
             "w-6 h-6 ml-2 opacity-0 group-hover:opacity-50 transition-opacity cursor-pointer",
-            editMode ? " invisible pointer-events-none" : "",
+            props.editMode ? " invisible pointer-events-none" : "",
           )}
-          onMouseUp={props.onRerunPressed}
-        />
-        {editMode ? (
+          onMouseUp={props.onRewindPressed}
+        /> */}
+        {props.editMode ? (
           <CheckCircleIcon
-            className="w-6 h-6 cursor-pointer ml-2 opacity-0 group-hover:opacity-50 transition-opacity duration-200"
+            className="w-6 h-6 cursor-pointer ml-2 shrink-0 opacity-0 group-hover:opacity-50 transition-opacity duration-200"
             onMouseUp={() => {
-              setEditMode(false);
+              props.setEditMode(false);
               const updatedMessageData = { ...messageData };
               if (
                 updatedMessageData.additional_kwargs?.function_call !==
@@ -434,8 +435,8 @@ export const Message = memo(function Message(
           />
         ) : (
           <PencilSquareIcon
-            className="w-6 h-6 cursor-pointer ml-2 opacity-0 group-hover:opacity-50 transition-opacity duration-200"
-            onMouseUp={() => setEditMode(true)}
+            className="w-6 h-6 cursor-pointer ml-2 shrink-0 opacity-0 group-hover:opacity-50 transition-opacity duration-200"
+            onMouseUp={() => props.setEditMode(true)}
           />
         )}
       </div>

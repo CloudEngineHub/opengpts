@@ -43,9 +43,10 @@ function convertBytesToReadableSize(bytes: number) {
 }
 
 export default function TypingBox(props: {
-  onSubmit: (data: MessageWithFiles) => Promise<void>;
+  onSubmit: (data: MessageWithFiles) => void;
   onInterrupt?: () => void;
   inflight?: boolean;
+  disabled?: boolean;
   isDocumentRetrievalActive: boolean;
 }) {
   const [inflight, setInflight] = useState(false);
@@ -158,7 +159,7 @@ export default function TypingBox(props: {
         </div>
         <button
           type="submit"
-          disabled={isInflight && !props.onInterrupt}
+          disabled={props.disabled || (isInflight && !props.onInterrupt)}
           onClick={
             props.onInterrupt
               ? (e) => {
@@ -170,7 +171,8 @@ export default function TypingBox(props: {
           className={cn(
             "relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-md px-3 " +
               "py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 bg-white",
-            isInflight && !props.onInterrupt && "opacity-50 cursor-not-allowed",
+            (props.disabled || (isInflight && !props.onInterrupt)) &&
+              "opacity-50 cursor-not-allowed",
           )}
         >
           {props.onInterrupt ? (

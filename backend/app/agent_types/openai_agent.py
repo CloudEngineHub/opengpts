@@ -36,7 +36,12 @@ def get_openai_agent_executor(
         llm_with_tools = llm.bind(tools=[format_tool_to_openai_tool(t) for t in tools])
     else:
         llm_with_tools = llm
-    agent = _get_messages | llm_with_tools
+    def agent(messages):
+        return (
+            messages
+            if len(messages[-1].additional_kwargs.get("tool_calls", []))
+            else _get_messages | llm_with_tools
+        )
     tool_executor = ToolExecutor(tools)
 
     # Define the function that determines whether to continue or not

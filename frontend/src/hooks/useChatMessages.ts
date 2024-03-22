@@ -68,14 +68,14 @@ export function useChatMessages(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stream?.status]);
 
-  const memoizedValues = useMemo(
-    () => ({
+  const memoizedValues = useMemo(() => {
+    console.log("MERGEVALUE", stream?.merge);
+    return {
       messages: stream?.merge
         ? [...(messages ?? []), ...(stream.messages ?? [])]
         : stream?.messages ?? messages,
       resumeable,
-    }),
-    [messages, stream?.merge, stream?.messages, resumeable],
-  );
+    };
+  }, [messages, stream?.merge, stream?.messages, resumeable]);
   return { ...memoizedValues };
 }
