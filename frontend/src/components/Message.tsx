@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 import type {
   FunctionDefinition,
   Message as MessageType,
@@ -33,30 +34,39 @@ function Function(props: {
   onNameChange?: (newValue: string) => void;
   argsEntries?: [string, unknown][];
   onArgsEntriesChange?: (newValue: [string, unknown][]) => void;
+  onRemovePressed?: () => void;
   open?: boolean;
   editMode?: boolean;
   setOpen?: (open: boolean) => void;
 }) {
   return (
     <div className="flex flex-col mt-1">
-      <div className="flex flex-col">
-        {props.call && (
-          <span className="text-gray-900 whitespace-pre-wrap break-words mr-2 uppercase opacity-50 text-xs mb-1">
-            Tool:
-          </span>
-        )}
-        {props.name !== undefined &&
-          (!props.editMode ? (
-            <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 relative -top-[1px] mr-auto">
-              {props.name}
+      <div className="flex w-full">
+        <div className="flex flex-col">
+          {props.call && (
+            <span className="text-gray-900 whitespace-pre-wrap break-words mr-2 uppercase opacity-50 text-xs mb-1">
+              Tool:
             </span>
-          ) : (
-            <input
-              onChange={(e) => props.onNameChange?.(e.target.value)}
-              className="rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 -top-[1px] mr-auto focus:ring-0"
-              value={props.name}
-            />
-          ))}
+          )}
+          {props.name !== undefined &&
+            (!props.editMode ? (
+              <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 relative -top-[1px] mr-auto">
+                {props.name}
+              </span>
+            ) : (
+              <input
+                onChange={(e) => props.onNameChange?.(e.target.value)}
+                className="rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 -top-[1px] mr-auto focus:ring-0"
+                value={props.name}
+              />
+            ))}
+        </div>
+        {props.editMode && (
+          <TrashIcon
+            className="w-4 h-4 ml-2 cursor-pointer opacity-50 ml-auto"
+            onClick={props.onRemovePressed}
+          />
+        )}
       </div>
       {!props.call && props.setOpen && (
         <span
@@ -132,7 +142,7 @@ function Function(props: {
                           />
                           <TrashIcon
                             className="w-4 h-4 ml-2 cursor-pointer opacity-50"
-                            onMouseUp={() => {
+                            onClick={() => {
                               if (props.argsEntries !== undefined) {
                                 props.onArgsEntriesChange?.([
                                   ...props.argsEntries.slice(0, i),
@@ -154,7 +164,7 @@ function Function(props: {
                     <td className="px-3 py-2">
                       <PlusCircleIcon
                         className="ml-auto w-6 h-6 cursor-pointer opacity-50"
-                        onMouseUp={() => {
+                        onClick={() => {
                           if (props.argsEntries === undefined) {
                             return;
                           }
@@ -290,6 +300,55 @@ export const Message = memo(function Message(
           {messageData.type}
         </div>
         <div className="prose flex flex-col w-[65ch]">
+          {(
+            ["function", "tool"].includes(messageData.type) &&
+            !contentIsDocuments
+              ? open
+              : true
+          ) ? (
+            typeof messageData.content === "string" ? (
+              <>
+                {props.editMode ? (
+                  <>
+                    <AutosizeTextarea
+                      onChange={(newValue) =>
+                        setMessageData((prev) => ({
+                          ...prev,
+                          content: newValue,
+                        }))
+                      }
+                      onKeyDown={(e) => {
+                        if (!e.metaKey && e.key === "Enter") {
+                          e.preventDefault();
+                          finishEditing();
+                        }
+                      }}
+                      className="text-gray-900 text-md leading-normal prose min-w-[65ch] bg-white mb-4"
+                      value={messageData.content}
+                    />
+                  </>
+                ) : (
+                  <div
+                    className="text-gray-900 prose min-w-[65ch]"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(
+                        marked(messageData.content),
+                      ).trim(),
+                    }}
+                  />
+                )}
+              </>
+            ) : contentIsDocuments ? (
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              <DocumentList documents={messageData.content as any} />
+            ) : (
+              <div className="text-gray-900 prose">
+                {str(messageData.content)}
+              </div>
+            )
+          ) : (
+            false
+          )}
           {["function", "tool"].includes(messageData.type) && (
             <Function
               call={false}
@@ -369,58 +428,74 @@ export const Message = memo(function Message(
                     return prev;
                   })
                 }
+                onRemovePressed={() => {
+                  setMessageData((prev) => {
+                    const newToolCalls = [
+                      ...(prev.additional_kwargs?.tool_calls ?? []).slice(0, i),
+                      ...(prev.additional_kwargs?.tool_calls ?? []).slice(
+                        i + 1,
+                      ),
+                    ];
+                    const newMessageData = {
+                      ...prev,
+                      additional_kwargs: {
+                        ...prev.additional_kwargs,
+                        tool_calls:
+                          newToolCalls.length > 0 ? newToolCalls : undefined,
+                      },
+                    };
+                    return newMessageData;
+                  });
+                  setToolCallFunctionArgsEntries((prev) => {
+                    if (prev !== undefined) {
+                      return [...prev.slice(0, i), ...prev.slice(i + 1)];
+                    }
+                    return prev;
+                  });
+                }}
                 editMode={props.editMode}
                 name={call.function?.name ?? ""}
               />
             );
           })}
-          {(
-            ["function", "tool"].includes(messageData.type) &&
-            !contentIsDocuments
-              ? open
-              : true
-          ) ? (
-            typeof messageData.content === "string" ? (
-              <>
-                {props.editMode &&
-                messageData.additional_kwargs?.function_call === undefined &&
-                messageData.additional_kwargs?.tool_calls === undefined ? (
-                  <>
-                    <AutosizeTextarea
-                      onChange={(newValue) =>
-                        setMessageData({ ...messageProps, content: newValue })
-                      }
-                      onKeyDown={(e) => {
-                        if (!e.metaKey && e.key === "Enter") {
-                          e.preventDefault();
-                          finishEditing();
-                        }
-                      }}
-                      className="text-gray-900 text-md leading-normal prose min-w-[65ch] bg-white"
-                      value={messageData.content}
-                    />
-                  </>
-                ) : (
-                  <div
-                    className="text-gray-900 prose min-w-[65ch]"
-                    dangerouslySetInnerHTML={{
-                      __html: DOMPurify.sanitize(
-                        marked(messageData.content),
-                      ).trim(),
-                    }}
-                  />
-                )}
-              </>
-            ) : contentIsDocuments ? (
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              <DocumentList documents={messageData.content as any} />
-            ) : (
-              <div className="text-gray-900 prose">
-                {str(messageData.content)}
-              </div>
-            )
-          ) : (
-            false
+          {messageData.type === "ai" && props.editMode && (
+            <div
+              className="flex items-center ml-auto mt-4 cursor-pointer opacity-50"
+              onClick={() => {
+                setMessageData((prev) => {
+                  const newMessageData = {
+                    ...prev,
+                    additional_kwargs: {
+                      ...prev.additional_kwargs,
+                      tool_calls: [
+                        ...(prev.additional_kwargs?.tool_calls ?? []),
+                        {
+                          id: uuidv4(),
+                          type: "function",
+                          index: (prev.additional_kwargs?.tool_calls ?? [])
+                            .length,
+                          function: {
+                            name: "",
+                            arguments: "",
+                          },
+                        },
+                      ],
+                    },
+                  };
+                  return newMessageData;
+                });
+                setToolCallFunctionArgsEntries((prev) => {
+                  let oldValues: any[] = [];
+                  if (prev) {
+                    oldValues = [...prev];
+                  }
+                  return [...oldValues, ["", ""]];
+                });
+              }}
+            >
+              <PlusCircleIcon className="w-4 h-4" />
+              <span className="text-sm ml-1">Add tool call</span>
+            </div>
           )}
         </div>
         {/* <ArrowUturnLeftIcon
