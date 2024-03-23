@@ -6,6 +6,9 @@ authors = ["Your Name <you@example.com>"]
 readme = "README.md"
 packages = [{include = "app"}]
 
+[tool.poetry.scripts]
+langgraph-studio = "app.cli:cli"
+
 [tool.poetry.dependencies]
 python = "^3.9.0,<3.12"
 sse-starlette = "^1.6.5"
