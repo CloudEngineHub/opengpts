@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import os
 import pathlib
 from typing import Optional
 
@@ -22,6 +23,16 @@ from app.lib.lifespan import connect
 )
 def start(path: Optional[str]):
     """Simple program that greets NAME for a total of COUNT times."""
+
+    os.environ.update(
+        {
+            "POSTGRES_PORT": "5433",
+            "POSTGRES_DB": "postgres",
+            "POSTGRES_USER": "postgres",
+            "POSTGRES_PASSWORD": "postgres",
+            "POSTGRES_HOST": "localhost",
+        }
+    )
 
     if path is None:
         print("Starting LangGraph Studio with demo graph")
