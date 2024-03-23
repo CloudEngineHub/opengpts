@@ -5,7 +5,6 @@ import { useHistories } from "../hooks/useHistories";
 import { deepEquals } from "../utils/equals";
 import { Timeline } from "./Timeline";
 import { JsonEditor } from "./JsonEditor";
-import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 interface StateGraphDebuggerProps
   extends Pick<
@@ -47,15 +46,18 @@ export function StateGraphDebugger(props: StateGraphDebuggerProps) {
     [activeDisplayedHistoryIndex],
   );
   return (
-    <div className="flex-1 flex flex-col items-stretch pb-[76px] mb-32">
+    // TODO: Remove hacky negative margin
+    <div className="flex-1 flex flex-col items-stretch pb-[76px] mb-32 -mx-4">
+      <h2 className="uppercase text-sm opacity-50">Current graph state</h2>
       <JsonEditor
-        height="50vh"
+        height="53vh"
         value={localState}
         setValue={setLocalState}
         hideSubmitButton={true}
+        disabled={true}
       ></JsonEditor>
       {props.stream?.status === "inflight" && (
-        <div className="leading-6 mb-2 animate-pulse font-black text-gray-400 text-lg">
+        <div className="leading-6 mb-2 animate-pulse font-black text-gray-400 text-2xl mx-auto">
           ...
         </div>
       )}
@@ -65,7 +67,7 @@ export function StateGraphDebugger(props: StateGraphDebuggerProps) {
             "An error has occurred. Please try again."}
         </div>
       )}
-      {props.stream?.status !== "inflight" &&
+      {/* {props.stream?.status !== "inflight" &&
         activeDisplayedHistoryIndex < displayHistories.length - 1 && (
           <div
             className="mt-2 flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800 ring-1 ring-inset ring-yellow-600/20 cursor-pointer"
@@ -102,9 +104,9 @@ export function StateGraphDebugger(props: StateGraphDebuggerProps) {
             }}
           >
             <ArrowPathIcon className="h-5 w-5 mr-1" />
-            Rerun current history.
+            Resume execution.
           </div>
-        )}
+        )} */}
       <div className="fixed left-0 lg:left-72 bottom-0 right-0 p-4 bg-gray-100">
         <Timeline
           disabled={props.stream?.status === "inflight"}

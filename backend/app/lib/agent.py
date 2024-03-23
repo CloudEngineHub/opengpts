@@ -20,7 +20,7 @@ class ConfigurableAgent(RunnableBinding):
     ) -> None:
         others.pop("bound", None)
         _agent = get_chain(
-            interrupt_before_action,
+            interrupt_before_action=False,
         )
         agent_executor = _agent.with_config({"recursion_limit": 50})
         super().__init__(

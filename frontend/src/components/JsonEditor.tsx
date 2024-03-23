@@ -69,7 +69,9 @@ export function JsonEditor(props: {
           setInflight(true);
           await props.onSubmit?.(input);
           setInflight(false);
-          (props.setValue ?? setDefaultValue)("");
+          (props.setValue ?? setDefaultValue)(
+            JSON.stringify(generateSimplest(inputSchema ?? {}), null, 2),
+          );
         }}
       >
         {" "}
@@ -83,8 +85,11 @@ export function JsonEditor(props: {
             value={props.value ?? defaultValue}
             onChange={props.setValue ?? setDefaultValue}
             height={props.height ?? "20vh"}
-            className="max-w-full w-full overflow-auto min-w-0"
-            readOnly={isInflight}
+            className={cn(
+              "max-w-full w-full overflow-auto min-w-0",
+              (isInflight || props.disabled) && "opacity-50",
+            )}
+            readOnly={isInflight || props.disabled}
             extensions={[
               keymap.of([
                 { key: "Mod-Enter", run: () => true },

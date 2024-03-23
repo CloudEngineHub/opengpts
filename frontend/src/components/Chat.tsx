@@ -121,7 +121,7 @@ export function Chat(props: ChatProps) {
         ))}
       </div>
       {(props.stream?.status === "inflight" || localMessages == null) && (
-        <div className="leading-6 mb-2 animate-pulse font-black text-gray-400 text-lg">
+        <div className="leading-6 mb-2 animate-pulse font-black text-gray-400 text-2xl mx-auto">
           ...
         </div>
       )}
@@ -177,7 +177,7 @@ export function Chat(props: ChatProps) {
             }
           >
             <ArrowPathIcon className="h-5 w-5 mr-1" />
-            Rerun current history.
+            Resume execution.
           </div>
         )}
       <div className="fixed left-0 lg:left-72 bottom-0 right-0 p-4 bg-gray-100">

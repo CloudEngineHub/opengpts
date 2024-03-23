@@ -8,7 +8,7 @@ from langchain.tools.retriever import create_retriever_tool
 from langchain_community.retrievers import (
     WikipediaRetriever,
 )
-from langchain_core.messages import AnyMessage, SystemMessage, ToolMessage
+from langchain_core.messages import BaseMessage, SystemMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint import BaseCheckpointSaver, CheckpointAt
 from langgraph.graph import END
@@ -30,10 +30,11 @@ CHECKPOINTER = PostgresCheckpoint(at=CheckpointAt.END_OF_STEP)
 
 
 class AgentState(TypedDict):
-    messages: Annotated[Sequence[AnyMessage], operator.add]
+    messages: Annotated[Sequence[BaseMessage], operator.add]
 
 
 def get_chain(
+    interrupt_before_action,
     checkpoint: BaseCheckpointSaver = CHECKPOINTER,
 ):
     tools = [_get_wikipedia()]
