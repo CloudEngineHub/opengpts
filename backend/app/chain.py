@@ -1,18 +1,16 @@
 import json
-import operator
 from functools import lru_cache
-from typing import Annotated, Sequence, TypedDict
 
 from langchain.tools.render import format_tool_to_openai_tool
 from langchain.tools.retriever import create_retriever_tool
 from langchain_community.retrievers import (
     WikipediaRetriever,
 )
-from langchain_core.messages import BaseMessage, SystemMessage, ToolMessage
+from langchain_core.messages import SystemMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint import BaseCheckpointSaver, CheckpointAt
 from langgraph.graph import END
-from langgraph.graph.message import StateGraph
+from langgraph.graph.message import MessageGraph
 from langgraph.prebuilt import ToolExecutor, ToolInvocation
 
 from app.lib.checkpoint import PostgresCheckpoint
@@ -29,12 +27,8 @@ def _get_wikipedia():
 CHECKPOINTER = PostgresCheckpoint(at=CheckpointAt.END_OF_STEP)
 
 
-class AgentState(TypedDict):
-    messages: Annotated[Sequence[BaseMessage], operator.add]
-
-
 def get_chain(
-    interrupt_before_action,
+    interrupt_before_action: bool,
     checkpoint: BaseCheckpointSaver = CHECKPOINTER,
 ):
     tools = [_get_wikipedia()]
@@ -66,21 +60,18 @@ def get_chain(
     else:
         llm_with_tools = llm
 
-    async def agent(state):
-        print(state)
-        messages = state["messages"]
-        result = await (
+    def agent(messages):
+        return (
             messages
-            if len(messages[-1].get("additional_kwargs", {}).get("tool_calls", []))
+            if len(messages[-1].additional_kwargs.get("tool_calls", []))
             else _get_messages | llm_with_tools
-        ).ainvoke(messages)
-        return {"messages": [result]}
+        )
 
     tool_executor = ToolExecutor(tools)
 
     # Define the function that determines whether to continue or not
-    def should_continue(state: AgentState):
-        last_message = state["messages"][-1]
+    def should_continue(messages):
+        last_message = messages[-1]
         # If there is no function call, then we finish
         if "tool_calls" not in last_message.additional_kwargs:
             return "end"
@@ -89,8 +80,7 @@ def get_chain(
             return "continue"
 
     # Define the function to execute tools
-    async def call_tool(state):
-        messages = state["messages"]
+    async def call_tool(messages):
         actions: list[ToolInvocation] = []
         # Based on the continue condition
         # we know the last message involves a function call
@@ -119,9 +109,9 @@ def get_chain(
                 last_message.additional_kwargs["tool_calls"], responses
             )
         ]
-        return {"messages": tool_messages}
+        return tool_messages
 
-    workflow = StateGraph(AgentState)
+    workflow = MessageGraph()
 
     # Define the two nodes we will cycle between
     workflow.add_node("agent", agent)
@@ -161,4 +151,5 @@ def get_chain(
     # meaning you can use it as you would any other runnable
     return workflow.compile(
         checkpointer=checkpoint,
+        interrupt_before=["action"] if interrupt_before_action else None,
     )
