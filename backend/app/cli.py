@@ -70,7 +70,7 @@ def start(path: Optional[str], debug: bool):
 
     # uvicorn.run(app, host="0.0.0.0", port=8100)
     server = uvicorn.Server(uvicorn.Config("app.server:app", host="0.0.0.0", port=8100))
-    compose_spec = pathlib.Path(__file__).parent / "../../docker-compose-cli.yml"
+    compose_spec = pathlib.Path(__file__).parent / "docker-compose-cli.yml"
 
     async def serve_once_ready():
         for _ in range(120):
