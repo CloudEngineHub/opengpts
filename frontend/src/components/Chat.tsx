@@ -13,7 +13,11 @@ import { useHistories } from "../hooks/useHistories.ts";
 import { Timeline } from "./Timeline.tsx";
 import { deepEquals } from "../utils/equals.ts";
 
-interface ChatProps extends Pick<StreamStateProps, "stream" | "stopStream"> {
+interface ChatProps
+  extends Pick<
+    StreamStateProps,
+    "stream" | "stopStream" | "streamErrorMessage" | "setStreamErrorMessage"
+  > {
   chat: ChatType;
   startStream: (props: {
     message?: MessageWithFiles;
@@ -50,6 +54,7 @@ export function Chat(props: ChatProps) {
   const activeHistory = displayHistories[activeDisplayedHistoryIndex];
   const [messageEditStatuses, setMessageEditStatuses] = useState<boolean[]>([]);
   const [localMessages, setLocalMessages] = useState<MessageType[]>([]);
+
   useEffect(() => {
     setMessageEditStatuses(localMessages.map(() => false) ?? []);
   }, [localMessages]);
@@ -61,29 +66,12 @@ export function Chat(props: ChatProps) {
   useEffect(() => {
     setLocalMessages([...(serverMessages ?? [])]);
   }, [serverMessages]);
+  useEffect(
+    () => props.setStreamErrorMessage(null),
+    [activeDisplayedHistoryIndex],
+  );
+
   const updateMessage = (newMessage: MessageType) => {
-    // setHistories((prevHistories) => {
-    //   const trueActiveHistoryIndex = prevHistories.findIndex((prevHistory) => {
-    //     return extractCompositeKey(prevHistory) === extractCompositeKey(activeHistory);
-    //   });
-    //   const updatedMessageIndex = activeHistory.values.findIndex(
-    //     (historyMessage: MessageType) =>
-    //       historyMessage.id === newMessage.id,
-    //   );
-    //   const newHistory = {
-    //     ...activeHistory,
-    //     values: [
-    //       ...activeHistory.values.slice(0, updatedMessageIndex),
-    //       newMessage,
-    //       ...activeHistory.values.slice(updatedMessageIndex + 1),
-    //     ],
-    //   };
-    //   return [
-    //     ...prevHistories.slice(0, trueActiveHistoryIndex),
-    //     newHistory,
-    //     ...prevHistories.slice(trueActiveHistoryIndex + 1),
-    //   ];
-    // });
     setLocalMessages((prevLocalMessages) => {
       const updatedMessageIndex = localMessages.findIndex(
         (message: MessageType) => message.id === newMessage.id,
@@ -122,15 +110,6 @@ export function Chat(props: ChatProps) {
               });
             }}
             onUpdate={updateMessage}
-            // onRewindPressed={() => {
-            //   // First displayed history where the message appears
-            //   const newDisplayHistoryIndex = displayHistories.findIndex((history) => {
-            //     return !!history.values.find((message) => {
-            //       return deepEquals(message, msg);
-            //     });
-            //   });
-            //   setActiveDisplayedHistoryIndex(newDisplayHistoryIndex);
-            // }}
             runId={
               activeDisplayedHistoryIndex === displayHistories.length - 1 &&
               i === (activeHistory?.values ?? []).length - 1 &&
@@ -146,9 +125,10 @@ export function Chat(props: ChatProps) {
           ...
         </div>
       )}
-      {props.stream?.status === "error" && (
+      {(props.streamErrorMessage || props.stream?.status === "error") && (
         <div className="flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-600/20">
-          An error has occurred. Please try again.
+          {props.streamErrorMessage ??
+            "An error has occurred. Please try again."}
         </div>
       )}
       {resumeable &&
@@ -157,15 +137,28 @@ export function Chat(props: ChatProps) {
           <div
             className="flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800 ring-1 ring-inset ring-yellow-600/20 cursor-pointer"
             onClick={async () => {
-              await fetch(`/threads/${props.chat.thread_id}/state`, {
-                method: "POST",
-                headers: {
-                  Accept: "application/json",
-                  "Content-Type": "application/json",
+              const body = JSON.stringify({
+                messages: [...(localMessages ?? [])],
+              });
+              const res = await fetch(
+                `/threads/${props.chat.thread_id}/state`,
+                {
+                  method: "POST",
+                  headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                  },
+                  body,
                 },
-                body: JSON.stringify({ messages: [...(localMessages ?? [])] }),
-              }).then((res) => res.json());
-              props.startStream({});
+              );
+              const json = await res.json();
+              if (!res.ok) {
+                props.setStreamErrorMessage(
+                  json.detail ?? "Unspecified error.",
+                );
+              } else {
+                props.startStream({});
+              }
             }}
           >
             <ArrowDownCircleIcon className="h-5 w-5 mr-1" />

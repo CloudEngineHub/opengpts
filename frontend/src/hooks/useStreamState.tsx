@@ -12,18 +12,24 @@ export interface StreamState {
 export interface StreamStateProps {
   stream: StreamState | null;
   startStream: (props: {
-    input: Message[] | null;
+    input: Message[] | any | null;
     assistant_id: string;
     thread_id: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     config?: Record<string, any>;
   }) => Promise<void>;
   stopStream?: (clear?: boolean) => void;
+  setStreamStateStatus: (status: "inflight" | "error" | "done") => void;
+  streamErrorMessage: string | null;
+  setStreamErrorMessage: (message: string | null) => void;
 }
 
 export function useStreamState(): StreamStateProps {
   const [current, setCurrent] = useState<StreamState | null>(null);
   const [controller, setController] = useState<AbortController | null>(null);
+  const [streamErrorMessage, setStreamErrorMessage] = useState<string | null>(
+    null,
+  );
 
   const startStream = useCallback(
     async (props: {
@@ -37,7 +43,6 @@ export function useStreamState(): StreamStateProps {
       const controller = new AbortController();
       setController(controller);
       setCurrent({ status: "inflight", messages: input || [], merge: true });
-
       await fetchEventSource("/runs/stream", {
         signal: controller.signal,
         method: "POST",
@@ -66,6 +71,7 @@ export function useStreamState(): StreamStateProps {
               messages: current?.messages,
               run_id: current?.run_id,
             }));
+            setStreamErrorMessage("Error received while streaming output.");
           }
         },
         onclose() {
@@ -84,6 +90,7 @@ export function useStreamState(): StreamStateProps {
             run_id: current?.run_id,
             merge: current?.merge,
           }));
+          setStreamErrorMessage("Error in stream.");
           setController(null);
           throw error;
         },
@@ -113,9 +120,15 @@ export function useStreamState(): StreamStateProps {
     [controller],
   );
 
+  const setStreamStateStatus = (value: "inflight" | "error" | "done") =>
+    setCurrent((current) => ({ ...current, status: value }));
+
   return {
     startStream,
     stopStream,
     stream: current,
+    setStreamStateStatus,
+    streamErrorMessage,
+    setStreamErrorMessage,
   };
 }

@@ -1,5 +1,5 @@
 import json
-from typing import Optional, Sequence
+from typing import Dict, Optional, Sequence, Union
 
 import langsmith.client
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
@@ -26,7 +26,7 @@ class CreateRunPayload(BaseModel):
 
     assistant_id: str
     thread_id: str
-    input: Optional[Sequence[AnyMessage]] = Field(default_factory=list)
+    input: Optional[Union[Sequence[AnyMessage], Dict]] = Field(default_factory=list)
     config: Optional[RunnableConfig] = None
 
 
@@ -49,6 +49,7 @@ async def _run_input_and_config(request: Request, opengpts_user_id: OpengptsUser
         },
     }
     try:
+        print(body)
         input_ = (
             _unpack_input(agent.get_input_schema(config).validate(body["input"]))
             if body["input"] is not None
@@ -73,6 +74,18 @@ async def create_run(
     return {"status": "ok"}  # TODO add a run id
 
 
+@router.post("/eager")
+async def create_run_eager(
+    payload: CreateRunPayload,  # for openapi docs
+    request: Request,
+    opengpts_user_id: OpengptsUserId,
+    background_tasks: BackgroundTasks,
+):
+    """Create a run eagerly."""
+    input_, config = await _run_input_and_config(request, opengpts_user_id)
+    return await agent.ainvoke(input_, config)
+
+
 @router.post("/stream")
 async def stream_run(
     payload: CreateRunPayload,  # for openapi docs
@@ -81,7 +94,6 @@ async def stream_run(
 ):
     """Create a run."""
     input_, config = await _run_input_and_config(request, opengpts_user_id)
-
     return EventSourceResponse(to_sse(astream_messages(agent, input_, config)))
 
 

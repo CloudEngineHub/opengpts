@@ -10,8 +10,6 @@ CREATE TABLE IF NOT EXISTS assistant (
     public BOOLEAN NOT NULL
 );
 
-INSERT INTO assistant (user_id, name, config, public) VALUES ('00000000-0000-0000-0000-000000000000', 'Default', '{}', false);
-
 CREATE TABLE IF NOT EXISTS thread (
     thread_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     assistant_id UUID REFERENCES assistant(assistant_id) ON DELETE SET NULL,

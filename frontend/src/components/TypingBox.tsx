@@ -47,7 +47,7 @@ export default function TypingBox(props: {
   onInterrupt?: () => void;
   inflight?: boolean;
   disabled?: boolean;
-  isDocumentRetrievalActive: boolean;
+  isDocumentRetrievalActive?: boolean;
 }) {
   const [inflight, setInflight] = useState(false);
   const isInflight = props.inflight || inflight;

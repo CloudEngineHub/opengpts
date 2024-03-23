@@ -443,7 +443,7 @@ export const Message = memo(function Message(
         )}
       </div>
       {runId && (
-        <div className="mt-2 pl-[120px]">
+        <div className="mt-2 pl-6">
           <LangSmithActions runId={runId} />
         </div>
       )}

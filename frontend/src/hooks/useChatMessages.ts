@@ -25,6 +25,7 @@ export function useChatMessages(
   stopStream?: (clear?: boolean) => void,
 ): {
   messages: Message[] | null;
+  setMessages: React.Dispatch<React.SetStateAction<Message[] | null>>;
   resumeable: boolean;
 } {
   const [messages, setMessages] = useState<Message[] | null>(null);
@@ -73,5 +74,5 @@ export function useChatMessages(
       resumeable,
     };
   }, [messages, stream?.merge, stream?.messages, resumeable]);
-  return { ...memoizedValues };
+  return { ...memoizedValues, setMessages };
 }

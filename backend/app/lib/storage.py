@@ -101,7 +101,7 @@ async def get_thread(user_id: str, thread_id: str) -> Optional[Thread]:
 
 async def get_thread_state(user_id: str, thread_id: str):
     """Get all messages for a thread."""
-    app = get_chain(False)
+    app = get_chain(interrupt_before_action=False)
     state = await app.aget_state({"configurable": {"thread_id": thread_id}})
     return {
         "values": [map_chunk_to_msg(c) for c in state.values]
@@ -115,13 +115,13 @@ async def update_thread_state(
     user_id: str, thread_id: str, messages: Sequence[AnyMessage] | dict[str, Any]
 ):
     """Add messages to a thread."""
-    app = get_chain(False)
+    app = get_chain(interrupt_before_action=False)
     return await app.aupdate_state({"configurable": {"thread_id": thread_id}}, messages)
 
 
 async def get_thread_history(user_id: str, thread_id: str):
     """Get the history of a thread."""
-    app = get_chain(False)
+    app = get_chain(interrupt_before_action=False)
     return [
         {
             "values": [map_chunk_to_msg(c) for c in c.values]

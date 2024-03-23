@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import { v4 as uuidv4 } from "uuid";
 import { Chat } from "./components/Chat";
 import { ChatList } from "./components/ChatList";
 import { Layout } from "./components/Layout";
@@ -15,13 +16,21 @@ import { useConfigList } from "./hooks/useConfigList";
 import { Config } from "./components/Config";
 import { MessageWithFiles } from "./utils/formTypes.ts";
 import { TYPE_NAME } from "./constants.ts";
+import { StateGraphDebugger } from "./components/StateGraphDebugger.tsx";
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { configSchema, configDefaults } = useSchemas();
+  const { configSchema, configDefaults, outputSchema } = useSchemas();
   const { chats, currentChat, createChat, enterChat } = useChatList();
   const { configs, currentConfig, saveConfig, enterConfig } = useConfigList();
-  const { startStream, stopStream, stream } = useStreamState();
+  const {
+    startStream,
+    stopStream,
+    stream,
+    setStreamStateStatus,
+    streamErrorMessage,
+    setStreamErrorMessage,
+  } = useStreamState();
   const [isDocumentRetrievalActive, setIsDocumentRetrievalActive] =
     useState(false);
 
@@ -118,6 +127,57 @@ function App() {
     [createChat, startTurn, currentConfig],
   );
 
+  const startStateGraph = useCallback(
+    async (state: string) => {
+      if (!currentConfig) return;
+      const chat = await createChat(uuidv4(), currentConfig.assistant_id);
+      startStateGraphTurn({
+        state,
+        assistant_id: chat.assistant_id,
+        thread_id: chat.thread_id,
+      });
+    },
+    [currentConfig],
+  );
+
+  const startStateGraphTurn = useCallback(
+    async (props: {
+      state: string | null;
+      assistant_id: string;
+      thread_id: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      config?: Record<string, any>;
+    }) => {
+      const { state, assistant_id, thread_id, config } = props;
+      setStreamStateStatus("inflight");
+      try {
+        const res = await fetch("/runs/eager", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            input: state ? JSON.parse(state) : null,
+            assistant_id,
+            thread_id,
+            config,
+          }),
+        });
+        const text = await res.text();
+        console.log(text, res.ok);
+        if (!res.ok) {
+          throw new Error(text ?? "Unspecified error running state graph.");
+        } else {
+          setStreamStateStatus("done");
+        }
+      } catch (e: any) {
+        setStreamStateStatus("error");
+        setStreamErrorMessage(e.message);
+      }
+    },
+    [currentConfig],
+  );
+
   const selectChat = useCallback(
     async (id: string | null) => {
       if (currentChat) {
@@ -143,23 +203,40 @@ function App() {
     [enterConfig, enterChat],
   );
 
+  const isMessageGraph = outputSchema?.type === "array";
+
   const content = currentChat ? (
-    <Chat
-      chat={currentChat}
-      startStream={startTurn}
-      stopStream={stopStream}
-      stream={stream}
-      isDocumentRetrievalActive={isDocumentRetrievalActive}
-    />
+    isMessageGraph ? (
+      <Chat
+        chat={currentChat}
+        startStream={startTurn}
+        stopStream={stopStream}
+        stream={stream}
+        isDocumentRetrievalActive={isDocumentRetrievalActive}
+        streamErrorMessage={streamErrorMessage}
+        setStreamErrorMessage={setStreamErrorMessage}
+      />
+    ) : (
+      <StateGraphDebugger
+        chat={currentChat}
+        startStateGraph={startStateGraphTurn}
+        stopStream={stopStream}
+        stream={stream}
+        streamErrorMessage={streamErrorMessage}
+        setStreamErrorMessage={setStreamErrorMessage}
+      ></StateGraphDebugger>
+    )
   ) : currentConfig ? (
     <NewChat
       startChat={startChat}
+      startStateGraph={startStateGraph}
       configSchema={configSchema}
       configDefaults={configDefaults}
       configs={configs}
       currentConfig={currentConfig}
       saveConfig={saveConfig}
       enterConfig={selectConfig}
+      isMessageGraph={isMessageGraph}
       isDocumentRetrievalActive={isDocumentRetrievalActive}
     />
   ) : (

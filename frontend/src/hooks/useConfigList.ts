@@ -72,8 +72,7 @@ export function useConfigList(): ConfigListProps {
       if (publicConfigs.find((a: Config) => a.assistant_id === shared_id)) {
         setCurrent(shared_id);
       } else {
-        // console.log(myConfigs)
-        setCurrent(myConfigs[0].assistant_id);
+        saveConfig("default", {}, [], false);
       }
     }
 

@@ -21,7 +21,7 @@ export function Timeline(props: {
         className="flex items-center p-2 text-sm"
         type="submit"
         disabled={props.disabled}
-        onMouseUp={() => setExpanded((expanded) => !expanded)}
+        onClick={() => setExpanded((expanded) => !expanded)}
       >
         <ClockIcon className="h-4 w-4 mr-1 rounded-md shrink-0" />
         <span className="text-gray-900 font-semibold shrink-0">

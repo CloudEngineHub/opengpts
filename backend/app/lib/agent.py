@@ -1,6 +1,5 @@
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping, Optional
 
-from langchain_core.messages import AnyMessage
 from langchain_core.runnables import (
     RunnableBinding,
 )
@@ -31,15 +30,9 @@ class ConfigurableAgent(RunnableBinding):
         )
 
 
-agent = (
-    ConfigurableAgent(
-        assistant_id=None,
-        thread_id=None,
-    )
-    .configurable_fields(
-        # thread_id=ConfigurableField(id="thread_id", name="Thread ID", is_shared=True),
-    )
-    .with_types(input_type=Sequence[AnyMessage], output_type=Sequence[AnyMessage])
+agent = ConfigurableAgent(
+    assistant_id=None,
+    thread_id=None,
 )
 
 if __name__ == "__main__":
