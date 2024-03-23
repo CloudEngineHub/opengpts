@@ -16,7 +16,7 @@ app = FastAPI(title="LangGraph Studio API", lifespan=lifespan)
 
 
 # Get root of app, used to point to directory containing static files
-ROOT = Path(__file__).parent.parent
+ROOT = Path(__file__).parent
 
 
 app.include_router(api_router)
