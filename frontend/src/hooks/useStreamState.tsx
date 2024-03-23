@@ -42,7 +42,7 @@ export function useStreamState(): StreamStateProps {
       const { input, assistant_id, thread_id, config } = props;
       const controller = new AbortController();
       setController(controller);
-      setCurrent({ status: "inflight", messages: input || [], merge: true });
+      setCurrent({ status: "inflight", messages: input || [], merge: false });
       await fetchEventSource("/runs/stream", {
         signal: controller.signal,
         method: "POST",

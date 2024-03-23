@@ -64,7 +64,12 @@ export function Chat(props: ChatProps) {
     );
   }, [displayHistories.length]);
   useEffect(() => {
-    setLocalMessages([...(serverMessages ?? [])]);
+    const dedupedServerMessages = [
+      ...(serverMessages ?? []),
+    ]; /*.filter((serverMessage, i, self) => {
+      return !self.slice(i + 1).find((msg) => serverMessage.id === msg.id && serverMessage.content === msg.content);
+    });*/
+    setLocalMessages(dedupedServerMessages);
   }, [serverMessages]);
   useEffect(
     () => props.setStreamErrorMessage(null),
@@ -166,6 +171,7 @@ export function Chat(props: ChatProps) {
           </div>
         )}
       {!messageEditStatuses.find((status) => status) &&
+        props.stream?.status !== "inflight" &&
         activeDisplayedHistoryIndex < displayHistories.length - 1 && (
           <div
             className="flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800 ring-1 ring-inset ring-yellow-600/20 cursor-pointer"
