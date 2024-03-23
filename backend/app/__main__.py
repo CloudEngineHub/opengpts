@@ -18,7 +18,7 @@ from app.lib.lifespan import connect
 @click.argument(
     "path",
     required=False,
-    type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True),
+    type=str,
 )
 def start(path: Optional[str]):
     """Simple program that greets NAME for a total of COUNT times."""
@@ -30,8 +30,8 @@ def start(path: Optional[str]):
 
         try:
             module = importlib.import_module(path)
-        except ImportError:
-            print(f"Could not import python module at path: {path}")
+        except ImportError as e:
+            print(f"Could not import python module at path: {path} {e}")
             return
         try:
             graph = module.graph
