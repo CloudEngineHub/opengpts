@@ -26,7 +26,7 @@ def start(path: Optional[str]):
     if path is None:
         print("Starting LangGraph Studio with demo graph")
     else:
-        print("Starting LangGraph Studio with graph at path: {path}")
+        print(f"Starting LangGraph Studio with graph at path: {path}")
 
         try:
             module = importlib.import_module(path)
@@ -56,10 +56,12 @@ def start(path: Optional[str]):
         while True:
             conn: Optional[asyncpg.Connection] = None
             try:
+                print("Waiting for database to be ready...")
                 conn = await connect()
                 await conn.execute("select * from assistant limit 1")
                 break
-            except Exception:
+            except Exception as exc:
+                print(f"Database not ready, retrying... {exc}")
                 if conn:
                     await conn.close()
                 await asyncio.sleep(0.5)
@@ -77,16 +79,9 @@ def start(path: Optional[str]):
 
 
 async def exec_cmd(cmd: str, *args: str):
-    proc = await asyncio.create_subprocess_exec(
-        cmd, *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
+    proc = await asyncio.create_subprocess_exec(cmd, *args)
+    await proc.communicate()
 
-    stdout, stderr = await proc.communicate()
-
-    if stdout:
-        print(f"[stdout]\n{stdout.decode()}")
-    if stderr:
-        print(f"[stderr]\n{stderr.decode()}")
     if proc.returncode != 0 and proc.returncode != 130:
         print(proc.returncode)
         raise Exception(f"Command failed: {cmd} {' '.join(args)}")
