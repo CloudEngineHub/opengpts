@@ -172,7 +172,10 @@ export function Chat(props: ChatProps) {
         )}
       {!messageEditStatuses.find((status) => status) &&
         props.stream?.status !== "inflight" &&
-        activeDisplayedHistoryIndex < displayHistories.length - 1 && (
+        (activeDisplayedHistoryIndex < displayHistories.length - 1 ||
+          (localMessages[localMessages.length - 1]?.type === "ai" &&
+            localMessages[localMessages.length - 1]?.additional_kwargs
+              ?.tool_calls !== undefined)) && (
           <div
             className="flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800 ring-1 ring-inset ring-yellow-600/20 cursor-pointer"
             onClick={() =>
