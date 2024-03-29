@@ -43,7 +43,7 @@ function convertBytesToReadableSize(bytes: number) {
 }
 
 export default function TypingBox(props: {
-  onSubmit: (data: MessageWithFiles) => void;
+  onSubmit: (data: MessageWithFiles) => Promise<void>;
   onInterrupt?: () => void;
   inflight?: boolean;
   disabled?: boolean;
