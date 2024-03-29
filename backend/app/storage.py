@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any, List, Optional, Sequence
+from typing import Any, List, Optional, Sequence, Union
 
 from langchain_core.messages import AnyMessage
 from langchain_core.runnables import RunnableConfig
@@ -110,7 +110,7 @@ async def get_thread_state(user_id: str, thread_id: str):
 
 
 async def update_thread_state(
-    config: RunnableConfig, messages: Sequence[AnyMessage] | dict[str, Any]
+    config: RunnableConfig, messages: Union[Sequence[AnyMessage], dict[str, Any]]
 ):
     """Add messages to a thread."""
     app = get_agent_executor([], AgentType.GPT_35_TURBO, "", False)
