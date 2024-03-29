@@ -36,15 +36,3 @@ async def lifespan(app: FastAPI):
     yield
     await _pg_pool.close()
     _pg_pool = None
-
-
-async def connect() -> asyncpg.Connection:
-    conn = await asyncpg.connect(
-        database=os.environ["POSTGRES_DB"],
-        user=os.environ["POSTGRES_USER"],
-        password=os.environ["POSTGRES_PASSWORD"],
-        host=os.environ["POSTGRES_HOST"],
-        port=os.environ["POSTGRES_PORT"],
-    )
-    await _init_connection(conn)
-    return conn

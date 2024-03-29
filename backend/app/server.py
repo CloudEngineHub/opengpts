@@ -12,11 +12,11 @@ from app.upload import ingest_runnable
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="LangGraph Studio API", lifespan=lifespan)
+app = FastAPI(title="OpenGPTs API", lifespan=lifespan)
 
 
 # Get root of app, used to point to directory containing static files
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).parent.parent
 
 
 app.include_router(api_router)
