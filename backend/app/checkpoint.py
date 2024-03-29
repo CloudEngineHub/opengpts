@@ -6,7 +6,7 @@ from langchain_core.runnables import ConfigurableFieldSpec, RunnableConfig
 from langgraph.checkpoint import BaseCheckpointSaver
 from langgraph.checkpoint.base import Checkpoint, CheckpointThreadTs, CheckpointTuple
 
-from app.lib.lifespan import get_pg_pool
+from app.lifespan import get_pg_pool
 
 
 class PostgresCheckpoint(BaseCheckpointSaver):

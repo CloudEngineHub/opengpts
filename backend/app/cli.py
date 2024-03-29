@@ -12,8 +12,8 @@ from langgraph.pregel import Pregel
 from langgraph.checkpoint import CheckpointAt
 
 from app.hack import USER_SPECIFIED_CHAIN
-from app.lib.checkpoint import PostgresCheckpoint
-from app.lib.lifespan import connect
+from app.checkpoint import PostgresCheckpoint
+from app.lifespan import connect
 
 
 @click.group()

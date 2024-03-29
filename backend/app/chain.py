@@ -13,8 +13,8 @@ from langgraph.graph import END
 from langgraph.graph.message import MessageGraph
 from langgraph.prebuilt import ToolExecutor, ToolInvocation
 
-from app.lib.checkpoint import PostgresCheckpoint
-from app.lib.message_types import LiberalToolMessage
+from app.checkpoint import PostgresCheckpoint
+from app.message_types import LiberalToolMessage
 
 
 @lru_cache(maxsize=1)

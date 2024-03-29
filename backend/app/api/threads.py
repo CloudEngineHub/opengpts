@@ -5,8 +5,8 @@ from fastapi import APIRouter, HTTPException, Path
 from langchain.schema.messages import AnyMessage
 from pydantic import BaseModel, Field
 
-import app.lib.storage as storage
-from app.lib.schema import OpengptsUserId, Thread
+import app.storage as storage
+from app.schema import OpengptsUserId, Thread
 
 router = APIRouter()
 

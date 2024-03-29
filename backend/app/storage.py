@@ -4,9 +4,9 @@ from typing import Any, List, Optional, Sequence
 from langchain_core.messages import AnyMessage
 
 from app.chain import get_chain
-from app.lib.lifespan import get_pg_pool
-from app.lib.schema import Assistant, Thread
-from app.lib.stream import map_chunk_to_msg
+from app.lifespan import get_pg_pool
+from app.schema import Assistant, Thread
+from app.stream import map_chunk_to_msg
 
 
 async def list_assistants(user_id: str) -> List[Assistant]:
