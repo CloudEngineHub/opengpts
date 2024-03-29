@@ -105,7 +105,7 @@ async def get_thread_state(user_id: str, thread_id: str):
     state = await app.aget_state({"configurable": {"thread_id": thread_id}})
     return {
         "values": state.values,
-        "resumeable": bool(state.next),
+        "next": state.next,
     }
 
 
@@ -124,7 +124,7 @@ async def get_thread_history(user_id: str, thread_id: str):
     return [
         {
             "values": c.values,
-            "resumeable": bool(c.next),
+            "next": c.next,
             "config": c.config,
             "parent": c.parent_config,
         }

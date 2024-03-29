@@ -37,7 +37,7 @@ function usePrevious<T>(value: T): T | undefined {
 }
 
 export function Chat(props: ChatProps) {
-  const { messages: serverMessages, resumeable } = useChatMessages(
+  const { messages: serverMessages, next } = useChatMessages(
     props.chat.thread_id,
     props.stream,
     props.stopStream,
@@ -45,7 +45,7 @@ export function Chat(props: ChatProps) {
   const { histories } = useHistories(props.chat.thread_id, props.stream);
   const displayHistories = [...(histories ?? [])]
     .reverse()
-    .filter((history) => history.resumeable)
+    .filter((history) => history.next.length)
     .filter(
       (history, i, self) => !deepEquals(history.values, self[i - 1]?.values),
     );
@@ -136,7 +136,7 @@ export function Chat(props: ChatProps) {
             "An error has occurred. Please try again."}
         </div>
       )}
-      {resumeable &&
+      {next.length > 0 &&
         activeDisplayedHistoryIndex === displayHistories.length - 1 &&
         props.stream?.status !== "inflight" && (
           <div

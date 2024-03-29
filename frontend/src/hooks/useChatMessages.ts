@@ -3,12 +3,12 @@ import { Message } from "./useChatList";
 import { StreamState } from "./useStreamState";
 
 async function getState(threadId: string) {
-  const { values, resumeable } = await fetch(`/threads/${threadId}/state`, {
+  const { values, next } = await fetch(`/threads/${threadId}/state`, {
     headers: {
       Accept: "application/json",
     },
   }).then((r) => r.json());
-  return { values, resumeable };
+  return { values, next };
 }
 
 function usePrevious<T>(value: T): T | undefined {
@@ -26,18 +26,18 @@ export function useChatMessages(
 ): {
   messages: Message[] | null;
   setMessages: React.Dispatch<React.SetStateAction<Message[] | null>>;
-  resumeable: boolean;
+  next: string[];
 } {
   const [messages, setMessages] = useState<Message[] | null>(null);
-  const [resumeable, setResumeable] = useState(false);
+  const [next, setNext] = useState<string[]>([]);
   const prevStreamStatus = usePrevious(stream?.status);
 
   useEffect(() => {
     async function fetchMessages() {
       if (threadId) {
-        const { values, resumeable } = await getState(threadId);
+        const { values, next } = await getState(threadId);
         setMessages(values);
-        setResumeable(resumeable);
+        setNext(next);
       }
     }
 
@@ -51,15 +51,15 @@ export function useChatMessages(
   useEffect(() => {
     async function fetchMessages() {
       if (threadId) {
-        const { values, resumeable } = await getState(threadId);
+        const { values, next } = await getState(threadId);
         setMessages(values);
-        setResumeable(resumeable);
+        setNext(next);
         stopStream?.(true);
       }
     }
 
     if (prevStreamStatus === "inflight" && stream?.status !== "inflight") {
-      setResumeable(false);
+      setNext([]);
       fetchMessages();
     }
 
@@ -71,8 +71,8 @@ export function useChatMessages(
       messages: stream?.merge
         ? [...(messages ?? []), ...(stream.messages ?? [])]
         : stream?.messages ?? messages,
-      resumeable,
+      next,
     };
-  }, [messages, stream?.merge, stream?.messages, resumeable]);
+  }, [messages, stream?.merge, stream?.messages, next]);
   return { ...memoizedValues, setMessages };
 }

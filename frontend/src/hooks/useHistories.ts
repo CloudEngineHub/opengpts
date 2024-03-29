@@ -13,9 +13,8 @@ async function getHistories(threadId: string) {
 
 export interface History {
   values: MessageType[];
-  resumeable: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  config: Record<string, any>;
+  next: string[];
+  config: Record<string, unknown>;
 }
 
 export function useHistories(
@@ -23,23 +22,20 @@ export function useHistories(
   stream: StreamState | null,
 ): {
   histories: History[];
-  resumeable: boolean;
   setHistories: React.Dispatch<React.SetStateAction<History[]>>;
 } {
   const [histories, setHistories] = useState<History[]>([]);
-  const [resumeable, setResumeable] = useState(false);
 
   useEffect(() => {
     async function fetchHistories() {
       if (threadId) {
         const histories = await getHistories(threadId);
         setHistories(histories);
-        setResumeable(resumeable);
       }
     }
     fetchHistories();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadId, stream?.status]);
 
-  return { histories, resumeable, setHistories };
+  return { histories, setHistories };
 }

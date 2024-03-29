@@ -9,7 +9,7 @@ import { cn } from "../utils/cn";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import {
-  // ArrowUturnLeftIcon,
+  ArrowUturnLeftIcon,
   CheckCircleIcon,
   ChevronDownIcon,
   PencilSquareIcon,
@@ -195,13 +195,15 @@ function initializeFunctionArgsEntries(definition: FunctionDefinition) {
 function initializeToolCallFunctionArgsEntries(
   toolCalls: { function?: FunctionDefinition }[],
 ) {
-  return toolCalls.map((toolCall) => {
-    if (toolCall.function !== undefined) {
-      return initializeFunctionArgsEntries(toolCall.function ?? "{}");
-    } else {
-      return [];
-    }
-  });
+  return toolCalls
+    .map((toolCall) => {
+      if (toolCall.function !== undefined) {
+        return initializeFunctionArgsEntries(toolCall.function ?? "{}");
+      } else {
+        return [];
+      }
+    })
+    .filter((args): args is [string, unknown][] => args !== undefined);
 }
 
 export const Message = memo(function Message(
@@ -211,7 +213,7 @@ export const Message = memo(function Message(
     editMode: boolean;
     setEditMode: (newValue: boolean) => void;
     onUpdate: (newValue: MessageType) => void;
-    // onRewindPressed: () => void;
+    onRewindPressed: () => void;
   },
 ) {
   const { runId, onUpdate, ...messageProps } = props;
@@ -485,11 +487,7 @@ export const Message = memo(function Message(
                   return newMessageData;
                 });
                 setToolCallFunctionArgsEntries((prev) => {
-                  let oldValues: any[] = [];
-                  if (prev) {
-                    oldValues = [...prev];
-                  }
-                  return [...oldValues, ["", ""]];
+                  return [...(prev || []), [["", ""]]];
                 });
               }}
             >
@@ -498,13 +496,13 @@ export const Message = memo(function Message(
             </div>
           )}
         </div>
-        {/* <ArrowUturnLeftIcon
+        <ArrowUturnLeftIcon
           className={cn(
             "w-6 h-6 ml-2 opacity-0 group-hover:opacity-50 transition-opacity cursor-pointer",
             props.editMode ? " invisible pointer-events-none" : "",
           )}
           onMouseUp={props.onRewindPressed}
-        /> */}
+        />
         {props.editMode ? (
           <CheckCircleIcon
             className="w-6 h-6 cursor-pointer ml-2 shrink-0 opacity-0 group-hover:opacity-50 transition-opacity duration-200"
