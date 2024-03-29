@@ -26,8 +26,8 @@ class CreateRunPayload(BaseModel):
 
     assistant_id: str
     thread_id: str
-    input: Optional[Union[Sequence[AnyMessage], Dict]] = Field(default_factory=list)
     config: Optional[RunnableConfig] = None
+    input: Optional[Union[Sequence[AnyMessage], Dict]] = Field(default_factory=list)
 
 
 async def _run_input_and_config(request: Request, opengpts_user_id: OpengptsUserId):
@@ -49,7 +49,6 @@ async def _run_input_and_config(request: Request, opengpts_user_id: OpengptsUser
         },
     }
     try:
-        print(body)
         input_ = (
             _unpack_input(agent.get_input_schema(config).validate(body["input"]))
             if body["input"] is not None
@@ -72,18 +71,6 @@ async def create_run(
     input_, config = await _run_input_and_config(request, opengpts_user_id)
     background_tasks.add_task(agent.ainvoke, input_, config)
     return {"status": "ok"}  # TODO add a run id
-
-
-@router.post("/eager")
-async def create_run_eager(
-    payload: CreateRunPayload,  # for openapi docs
-    request: Request,
-    opengpts_user_id: OpengptsUserId,
-    background_tasks: BackgroundTasks,
-):
-    """Create a run eagerly."""
-    input_, config = await _run_input_and_config(request, opengpts_user_id)
-    return await agent.ainvoke(input_, config)
 
 
 @router.post("/stream")

@@ -1,4 +1,4 @@
-from typing import Annotated, Any, List, Optional, Sequence
+from typing import Annotated, Any, Dict, List, Optional, Sequence, Union
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Path
@@ -24,8 +24,8 @@ class ThreadPutRequest(BaseModel):
 class ThreadPostRequest(BaseModel):
     """Payload for adding messages to a thread."""
 
-    values: Optional[Any]
-    messages: Optional[Sequence[AnyMessage]]
+    values: Optional[Union[Dict[str, Any], Sequence[AnyMessage]]]
+    config: Optional[Dict[str, Any]] = None
 
 
 @router.get("/")
@@ -45,22 +45,14 @@ async def get_thread_state(
 
 @router.post("/{tid}/state")
 async def update_thread_state(
+    payload: ThreadPostRequest,
     opengpts_user_id: OpengptsUserId,
     tid: ThreadID,
-    payload: ThreadPostRequest,
 ):
     """Add messages to a thread."""
-    if payload.messages is not None:
-        return await storage.update_thread_state(
-            opengpts_user_id, tid, payload.messages
-        )
-    elif payload.values is not None:
-        return await storage.update_thread_state(opengpts_user_id, tid, payload.values)
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail='Invalid payload. You must supply either "messages" or "values".',
-        )
+    return await storage.update_thread_state(
+        payload.config or {"configurable": {"thread_id": tid}}, payload.values
+    )
 
 
 @router.get("/{tid}/history")

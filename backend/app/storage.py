@@ -2,11 +2,11 @@ from datetime import datetime, timezone
 from typing import Any, List, Optional, Sequence
 
 from langchain_core.messages import AnyMessage
+from langchain_core.runnables import RunnableConfig
 
-from app.chain import get_chain
+from app.agent import AgentType, get_agent_executor
 from app.lifespan import get_pg_pool
 from app.schema import Assistant, Thread
-from app.stream import map_chunk_to_msg
 
 
 async def list_assistants(user_id: str) -> List[Assistant]:
@@ -101,39 +101,34 @@ async def get_thread(user_id: str, thread_id: str) -> Optional[Thread]:
 
 async def get_thread_state(user_id: str, thread_id: str):
     """Get all messages for a thread."""
-    app = get_chain(interrupt_before_action=False)
+    app = get_agent_executor([], AgentType.GPT_35_TURBO, "", False)
     state = await app.aget_state({"configurable": {"thread_id": thread_id}})
     return {
-        "values": [map_chunk_to_msg(c) for c in state.values]
-        if isinstance(state.values, list)
-        else state.values,
+        "values": state.values,
         "resumeable": bool(state.next),
     }
 
 
 async def update_thread_state(
-    user_id: str, thread_id: str, messages: Sequence[AnyMessage] | dict[str, Any]
+    config: RunnableConfig, messages: Sequence[AnyMessage] | dict[str, Any]
 ):
     """Add messages to a thread."""
-    app = get_chain(interrupt_before_action=False)
-    return await app.aupdate_state({"configurable": {"thread_id": thread_id}}, messages)
+    app = get_agent_executor([], AgentType.GPT_35_TURBO, "", False)
+    return await app.aupdate_state(config, messages)
 
 
 async def get_thread_history(user_id: str, thread_id: str):
     """Get the history of a thread."""
-    app = get_chain(interrupt_before_action=False)
+    app = get_agent_executor([], AgentType.GPT_35_TURBO, "", False)
+    config = {"configurable": {"thread_id": thread_id}}
     return [
         {
-            "values": [map_chunk_to_msg(c) for c in c.values]
-            if isinstance(c.values, list)
-            else c.values,
+            "values": c.values,
             "resumeable": bool(c.next),
             "config": c.config,
             "parent": c.parent_config,
         }
-        async for c in app.aget_state_history(
-            {"configurable": {"thread_id": thread_id}}
-        )
+        async for c in app.aget_state_history(config)
     ]
 
 

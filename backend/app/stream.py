@@ -2,23 +2,7 @@ import logging
 from typing import AsyncIterator, Optional, Sequence, Union
 
 import orjson
-from langchain_core.messages import (
-    AIMessage,
-    AIMessageChunk,
-    AnyMessage,
-    BaseMessage,
-    BaseMessageChunk,
-    ChatMessage,
-    ChatMessageChunk,
-    FunctionMessage,
-    FunctionMessageChunk,
-    HumanMessage,
-    HumanMessageChunk,
-    SystemMessage,
-    SystemMessageChunk,
-    ToolMessage,
-    ToolMessageChunk,
-)
+from langchain_core.messages import AnyMessage, SystemMessage, message_chunk_to_message
 from langchain_core.runnables import Runnable, RunnableConfig
 from langserve.serialization import WellKnownLCSerializer
 
@@ -79,26 +63,6 @@ async def astream_messages(
             yield last_messages_list
 
 
-def map_chunk_to_msg(chunk: BaseMessageChunk) -> BaseMessage:
-    if not isinstance(chunk, BaseMessageChunk):
-        return chunk
-    args = {k: v for k, v in chunk.__dict__.items() if k != "type"}
-    if isinstance(chunk, HumanMessageChunk):
-        return HumanMessage(**args)
-    elif isinstance(chunk, AIMessageChunk):
-        return AIMessage(**args)
-    elif isinstance(chunk, FunctionMessageChunk):
-        return FunctionMessage(**args)
-    elif isinstance(chunk, ToolMessageChunk):
-        return ToolMessage(**args)
-    elif isinstance(chunk, SystemMessageChunk):
-        return SystemMessage(**args)
-    elif isinstance(chunk, ChatMessageChunk):
-        return ChatMessage(**args)
-    else:
-        raise ValueError(f"Unknown chunk type: {chunk}")
-
-
 _serializer = WellKnownLCSerializer()
 
 
@@ -118,7 +82,7 @@ async def to_sse(messages_stream: MessagesStream) -> AsyncIterator[dict]:
                 yield {
                     "event": "data",
                     "data": _serializer.dumps(
-                        [map_chunk_to_msg(msg) for msg in chunk]
+                        [message_chunk_to_message(msg) for msg in chunk]
                     ).decode(),
                 }
     except Exception:
