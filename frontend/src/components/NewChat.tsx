@@ -3,15 +3,12 @@ import TypingBox from "./TypingBox";
 import { ConfigListProps } from "../hooks/useConfigList";
 import { cn } from "../utils/cn";
 import { MessageWithFiles } from "../utils/formTypes.ts";
-import { JsonEditor } from "./JsonEditor.tsx";
 
 interface NewChatProps extends ConfigListProps {
   configSchema: Schemas["configSchema"];
   configDefaults: Schemas["configDefaults"];
   startChat: (message: MessageWithFiles) => Promise<void>;
-  startStateGraph: (state: any) => Promise<void>;
   isDocumentRetrievalActive: boolean;
-  isMessageGraph?: boolean;
 }
 
 const emptyStateImage = (
@@ -101,16 +98,10 @@ export function NewChat(props: NewChatProps) {
         </span>
       </div>
       <div className="fixed left-0 lg:left-72 bottom-0 right-0 p-4">
-        {!props.isMessageGraph ? (
-          <JsonEditor onSubmit={props.startStateGraph} />
-        ) : (
-          props.startChat && (
-            <TypingBox
-              onSubmit={props.startChat}
-              isDocumentRetrievalActive={props.isDocumentRetrievalActive}
-            />
-          )
-        )}
+        <TypingBox
+          onSubmit={props.startChat}
+          isDocumentRetrievalActive={props.isDocumentRetrievalActive}
+        />
       </div>
     </div>
   );
